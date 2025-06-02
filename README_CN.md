@@ -138,7 +138,7 @@ cp mcp_dock/config/mcp.config.example.json mcp_dock/config/mcp.config.json
 
 ```bash
 # 克隆并设置开发环境
-git clone https://github.com/your-username/MCP-Dock.git
+git clone https://github.com/BeliefanX/MCP-Dock.git
 cd MCP-Dock
 
 # 安装开发依赖
@@ -494,6 +494,6 @@ uv run uvicorn mcp_dock.api.gateway:app --log-level debug
 
 **由 BeliefanX 用 ❤️ 制作**
 
-[⭐ 在 GitHub 上给我们点星](https://github.com/your-username/MCP-Dock) | [🐛 报告问题](https://github.com/your-username/MCP-Dock/issues) | [💬 讨论](https://github.com/your-username/MCP-Dock/discussions)
+[⭐ 在 GitHub 上给我们点星](https://github.com/BeliefanX/MCP-Dock) | [🐛 报告问题](https://github.com/BeliefanX/MCP-Dock/issues) | [💬 讨论](https://github.com/BeliefanX/MCP-Dock/discussions)
 
 </div>

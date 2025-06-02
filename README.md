@@ -82,7 +82,7 @@ graph TB
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/MCP-Dock.git
+   git clone https://github.com/BeliefanX/MCP-Dock.git
    cd MCP-Dock
    ```
 
@@ -492,6 +492,6 @@ uv run uvicorn mcp_dock.api.gateway:app --log-level debug
 
 **Made with ❤️ by the BeliefanX**
 
-[⭐ Star us on GitHub](https://github.com/your-username/MCP-Dock) | [🐛 Report Issues](https://github.com/your-username/MCP-Dock/issues) | [💬 Discussions](https://github.com/your-username/MCP-Dock/discussions)
+[⭐ Star us on GitHub](https://github.com/BeliefanX/MCP-Dock) | [🐛 Report Issues](https://github.com/BeliefanX/MCP-Dock/issues) | [💬 Discussions](https://github.com/BeliefanX/MCP-Dock/discussions)
 
 </div>
