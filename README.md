@@ -136,7 +136,7 @@ Edit the configuration file to add your MCP services. See [Configuration Guide](
 
 ```bash
 # Clone and setup development environment
-git clone https://github.com/your-username/MCP-Dock.git
+git clone https://github.com/BeliefanX/MCP-Dock.git
 cd MCP-Dock
 
 # Install development dependencies
