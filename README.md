@@ -75,8 +75,11 @@ graph TB
 
 - Python 3.12+
 - [uv](https://github.com/astral-sh/uv) package manager
+- [Node.js](https://nodejs.org/) (LTS version) with npm and npx
 - 2GB+ RAM
 - 200MB+ disk space
+
+**Note**: The `start.sh` script will automatically detect and install missing dependencies (uv and Node.js) if they are not present on your system.
 
 ### Installation
 
@@ -86,21 +89,36 @@ graph TB
    cd MCP-Dock
    ```
 
-2. **Install dependencies**
+2. **Start the service (automatic dependency installation)**
    ```bash
-   # Install uv if not already installed
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   
-   # Install project dependencies
-   uv sync
+   # Using the startup script (recommended - handles all dependencies automatically)
+   ./start.sh
    ```
 
-3. **Start the service**
+   The startup script will automatically:
+   - Check for and install Node.js/npm/npx if missing
+   - Check for and install uv if missing
+   - Set up the Python virtual environment
+   - Install all project dependencies
+   - Start the MCP-Dock service
+
+3. **Manual installation (if automatic installation fails)**
    ```bash
-   # Using the startup script (recommended)
-   ./start.sh
-   
-   # Or manually
+   # Install Node.js (if not already installed)
+   # On Ubuntu/Debian:
+   curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+   sudo apt-get install -y nodejs
+
+   # On macOS with Homebrew:
+   brew install node
+
+   # Install uv (if not already installed)
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+
+   # Install project dependencies
+   uv sync
+
+   # Start manually
    uv run uvicorn mcp_dock.api.gateway:app --host 0.0.0.0 --port 8000
    ```
 
@@ -461,6 +479,57 @@ curl http://localhost:8000/api/service/
 # Check browser console for validation errors
 
 # Reset to default using the "Reset to Default" button in web UI
+```
+
+**8. Dependency installation issues**
+```bash
+# Node.js/npm/npx not found
+# Check if Node.js is properly installed
+node --version
+npm --version
+npx --version
+
+# If missing, install manually:
+# Ubuntu/Debian:
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# macOS:
+brew install node
+
+# Or download from: https://nodejs.org/
+```
+
+**9. uv installation issues**
+```bash
+# Check if uv is properly installed
+uv --version
+
+# If missing, install manually:
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Or via pip:
+pip install uv
+
+# Make sure uv is in PATH
+export PATH="$HOME/.cargo/bin:$PATH"
+echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
+```
+
+**10. MCP service startup failures**
+```bash
+# Check if required commands are available for stdio services
+which npx  # Should return path if Node.js is installed
+which uv   # Should return path if uv is installed
+
+# Check service configuration
+cat mcp_dock/config/mcp.config.json
+
+# Test npx command manually
+npx -y @modelcontextprotocol/server-notion --help
+
+# Check environment variables for stdio services
+env | grep -E "(NOTION_API_KEY|OPENAPI_MCP_HEADERS)"
 ```
 
 ### Debug Mode

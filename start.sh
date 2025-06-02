@@ -2,6 +2,7 @@
 # MCP-Dock Startup Script
 # This script checks if there are already processes running or if the port is in use
 # If so, it will terminate these processes, then start the application using uv
+# It also automatically installs required dependencies (Node.js/npm/npx and uv)
 
 # Define colors
 GREEN='\033[0;32m'
@@ -30,38 +31,206 @@ log_debug() {
     echo -e "${BLUE}[$(date '+%Y-%m-%d %H:%M:%S')] $1${NC}"
 }
 
+# Detect operating system
+detect_os() {
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        echo "linux"
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        echo "macos"
+    elif [[ "$OSTYPE" == "cygwin" ]] || [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
+        echo "windows"
+    else
+        echo "unknown"
+    fi
+}
+
+# Add to PATH and shell profile
+add_to_path() {
+    local new_path="$1"
+    local shell_profile=""
+
+    # Determine shell profile file
+    if [[ -n "$ZSH_VERSION" ]]; then
+        shell_profile="$HOME/.zshrc"
+    elif [[ -n "$BASH_VERSION" ]]; then
+        shell_profile="$HOME/.bashrc"
+    else
+        # Default to .bashrc
+        shell_profile="$HOME/.bashrc"
+    fi
+
+    # Add to current session
+    export PATH="$new_path:$PATH"
+
+    # Add to shell profile if not already present
+    if [[ -f "$shell_profile" ]] && ! grep -q "$new_path" "$shell_profile"; then
+        echo "export PATH=\"$new_path:\$PATH\"" >> "$shell_profile"
+        log_info "Added $new_path to $shell_profile"
+    fi
+}
+
+# Check and install Node.js/npm/npx
+check_and_install_nodejs() {
+    log_debug "Checking Node.js installation..."
+
+    if command -v node &> /dev/null && command -v npm &> /dev/null && command -v npx &> /dev/null; then
+        local node_version=$(node --version 2>/dev/null)
+        local npm_version=$(npm --version 2>/dev/null)
+        log_debug "Node.js is installed: $node_version, npm: $npm_version"
+        return 0
+    fi
+
+    log_warn "Node.js/npm/npx not found. Installing Node.js..."
+
+    local os=$(detect_os)
+    local install_success=false
+
+    case "$os" in
+        "linux")
+            # Try different installation methods for Linux
+            if command -v curl &> /dev/null; then
+                log_info "Installing Node.js using NodeSource repository..."
+                curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && \
+                sudo apt-get install -y nodejs && install_success=true
+            elif command -v wget &> /dev/null; then
+                log_info "Installing Node.js using NodeSource repository (wget)..."
+                wget -qO- https://deb.nodesource.com/setup_lts.x | sudo -E bash - && \
+                sudo apt-get install -y nodejs && install_success=true
+            fi
+
+            # Fallback: try package manager
+            if [[ "$install_success" == false ]]; then
+                if command -v apt-get &> /dev/null; then
+                    log_info "Trying to install Node.js via apt-get..."
+                    sudo apt-get update && sudo apt-get install -y nodejs npm && install_success=true
+                elif command -v yum &> /dev/null; then
+                    log_info "Trying to install Node.js via yum..."
+                    sudo yum install -y nodejs npm && install_success=true
+                elif command -v dnf &> /dev/null; then
+                    log_info "Trying to install Node.js via dnf..."
+                    sudo dnf install -y nodejs npm && install_success=true
+                fi
+            fi
+            ;;
+        "macos")
+            if command -v brew &> /dev/null; then
+                log_info "Installing Node.js using Homebrew..."
+                brew install node && install_success=true
+            else
+                log_warn "Homebrew not found. Please install Homebrew first or install Node.js manually."
+                log_info "Install Homebrew: /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+                log_info "Or download Node.js from: https://nodejs.org/"
+            fi
+            ;;
+        *)
+            log_warn "Unsupported operating system for automatic Node.js installation."
+            log_info "Please install Node.js manually from: https://nodejs.org/"
+            ;;
+    esac
+
+    if [[ "$install_success" == true ]]; then
+        # Refresh PATH and verify installation
+        hash -r
+        if command -v node &> /dev/null && command -v npm &> /dev/null; then
+            local node_version=$(node --version 2>/dev/null)
+            local npm_version=$(npm --version 2>/dev/null)
+            log_info "Node.js installation successful: $node_version, npm: $npm_version"
+
+            # Ensure npx is available (usually comes with npm 5.2+)
+            if ! command -v npx &> /dev/null; then
+                log_warn "npx not found, installing..."
+                npm install -g npx
+            fi
+            return 0
+        else
+            log_error "Node.js installation failed. Please install manually."
+            return 1
+        fi
+    else
+        log_error "Failed to install Node.js automatically."
+        log_info "Please install Node.js manually:"
+        log_info "  - Download from: https://nodejs.org/"
+        log_info "  - Or use your system's package manager"
+        return 1
+    fi
+}
+
+# Enhanced uv installation with better error handling
+check_and_install_uv() {
+    log_debug "Checking uv installation..."
+
+    if command -v uv &> /dev/null; then
+        local uv_version=$(uv --version 2>/dev/null | head -n 1)
+        log_debug "uv is installed: $uv_version"
+        return 0
+    fi
+
+    log_warn "uv not found. Installing uv..."
+
+    # Try official installation script
+    if command -v curl &> /dev/null; then
+        log_info "Installing uv using official installer..."
+        if curl -LsSf https://astral.sh/uv/install.sh | sh; then
+            # Add uv to PATH
+            local uv_bin_path="$HOME/.cargo/bin"
+            if [[ -d "$uv_bin_path" ]]; then
+                add_to_path "$uv_bin_path"
+            fi
+
+            # Refresh PATH and verify installation
+            hash -r
+            if command -v uv &> /dev/null; then
+                local uv_version=$(uv --version 2>/dev/null | head -n 1)
+                log_info "uv installation successful: $uv_version"
+                return 0
+            fi
+        fi
+    fi
+
+    # Fallback: try pip installation
+    if command -v pip &> /dev/null || command -v pip3 &> /dev/null; then
+        log_info "Trying to install uv via pip..."
+        local pip_cmd="pip"
+        if command -v pip3 &> /dev/null; then
+            pip_cmd="pip3"
+        fi
+
+        if $pip_cmd install uv; then
+            hash -r
+            if command -v uv &> /dev/null; then
+                local uv_version=$(uv --version 2>/dev/null | head -n 1)
+                log_info "uv installation successful via pip: $uv_version"
+                return 0
+            fi
+        fi
+    fi
+
+    log_error "Failed to install uv automatically."
+    log_info "Please install uv manually:"
+    log_info "  - Official installer: curl -LsSf https://astral.sh/uv/install.sh | sh"
+    log_info "  - Via pip: pip install uv"
+    log_info "  - Via pipx: pipx install uv"
+    return 1
+}
+
 # Check if required commands are available
 check_required_commands() {
     local missing_commands=()
-    
-    for cmd in uv lsof kill pgrep; do
+
+    for cmd in lsof kill pgrep; do
         if ! command -v $cmd &> /dev/null; then
             missing_commands+=($cmd)
         fi
     done
-    
+
     if [ ${#missing_commands[@]} -ne 0 ]; then
-        log_error "Error: The following commands are not installed: ${missing_commands[*]}"
-        
-        if [[ " ${missing_commands[*]} " =~ " uv " ]]; then
-            echo -e "Install uv command: curl -LsSf https://astral.sh/uv/install.sh | sh"
-        fi
-        
+        log_error "Error: The following system commands are not installed: ${missing_commands[*]}"
+        log_info "Please install these commands using your system's package manager."
         exit 1
     fi
 }
 
-# Check if uv is installed
-check_uv() {
-    if ! command -v uv &> /dev/null; then
-        log_error "Error: uv is not installed."
-        echo -e "Please install uv using the following command:"
-        echo -e "    pip install uv"
-        exit 1
-    fi
-    
-    log_debug "uv is installed: $(uv --version 2>&1 | head -n 1)"
-}
+
 
 # Check and terminate existing MCP processes
 check_existing_processes() {
@@ -190,22 +359,42 @@ check_environment_variables() {
 # Main function
 main() {
     log_info "Preparing to start MCP-Dock..."
-    
-    # Perform checks
+
+    # Perform dependency checks and installations
+    log_info "Checking and installing required dependencies..."
     check_required_commands
-    check_uv
+
+    # Check and install Node.js/npm/npx (required for stdio MCP services)
+    if ! check_and_install_nodejs; then
+        log_warn "Node.js installation failed. Some MCP services may not work."
+        log_warn "You can continue, but stdio-based MCP services using npx will fail."
+        read -p "Do you want to continue anyway? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            log_error "Installation aborted by user."
+            exit 1
+        fi
+    fi
+
+    # Check and install uv (required for Python package management)
+    if ! check_and_install_uv; then
+        log_error "uv installation failed. Cannot continue without uv."
+        exit 1
+    fi
+
+    # Continue with other checks
     check_existing_processes
     check_port
     check_environment_variables
     setup_virtualenv
     install_dependencies
-    
+
     # Set Python path to ensure modules can be found correctly
     export PYTHONPATH="$PYTHONPATH:$(pwd)"
-    
+
     # Start application
     log_info "Starting MCP-Dock..."
-    
+
     # Use uv run to start the application
     if [ "$1" == "--background" ]; then
         log_info "Starting in background mode, logs will be written to mcp_dock.log"

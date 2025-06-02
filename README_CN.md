@@ -77,8 +77,11 @@ graph TB
 
 - Python 3.12+
 - [uv](https://github.com/astral-sh/uv) 包管理器
+- [Node.js](https://nodejs.org/) (LTS 版本) 包含 npm 和 npx
 - 2GB+ 内存
 - 200MB+ 磁盘空间
+
+**注意**: `start.sh` 脚本会自动检测并安装系统中缺失的依赖项（uv 和 Node.js）。
 
 ### 安装步骤
 
@@ -88,21 +91,36 @@ graph TB
    cd MCP-Dock
    ```
 
-2. **安装依赖**
+2. **启动服务（自动依赖安装）**
    ```bash
-   # 如果尚未安装 uv
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   
-   # 安装项目依赖
-   uv sync
+   # 使用启动脚本（推荐 - 自动处理所有依赖项）
+   ./start.sh
    ```
 
-3. **启动服务**
+   启动脚本将自动：
+   - 检查并安装缺失的 Node.js/npm/npx
+   - 检查并安装缺失的 uv
+   - 设置 Python 虚拟环境
+   - 安装所有项目依赖
+   - 启动 MCP-Dock 服务
+
+3. **手动安装（如果自动安装失败）**
    ```bash
-   # 使用启动脚本（推荐）
-   ./start.sh
-   
-   # 或手动启动
+   # 安装 Node.js（如果尚未安装）
+   # Ubuntu/Debian:
+   curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+   sudo apt-get install -y nodejs
+
+   # macOS 使用 Homebrew:
+   brew install node
+
+   # 安装 uv（如果尚未安装）
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+
+   # 安装项目依赖
+   uv sync
+
+   # 手动启动
    uv run uvicorn mcp_dock.api.gateway:app --host 0.0.0.0 --port 8000
    ```
 
@@ -454,6 +472,57 @@ curl http://localhost:8000/api/service/
 # 检查浏览器控制台中的验证错误
 
 # 使用 Web UI 中的"重置为默认"按钮重置为默认值
+```
+
+**8. 依赖安装问题**
+```bash
+# Node.js/npm/npx 未找到
+# 检查 Node.js 是否正确安装
+node --version
+npm --version
+npx --version
+
+# 如果缺失，手动安装：
+# Ubuntu/Debian:
+curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# macOS:
+brew install node
+
+# 或从官网下载：https://nodejs.org/
+```
+
+**9. uv 安装问题**
+```bash
+# 检查 uv 是否正确安装
+uv --version
+
+# 如果缺失，手动安装：
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 或通过 pip:
+pip install uv
+
+# 确保 uv 在 PATH 中
+export PATH="$HOME/.cargo/bin:$PATH"
+echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
+```
+
+**10. MCP 服务启动失败**
+```bash
+# 检查 stdio 服务所需的命令是否可用
+which npx  # 如果安装了 Node.js 应返回路径
+which uv   # 如果安装了 uv 应返回路径
+
+# 检查服务配置
+cat mcp_dock/config/mcp.config.json
+
+# 手动测试 npx 命令
+npx -y @modelcontextprotocol/server-notion --help
+
+# 检查 stdio 服务的环境变量
+env | grep -E "(NOTION_API_KEY|OPENAPI_MCP_HEADERS)"
 ```
 
 ### 调试模式
