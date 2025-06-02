@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP 统一管理工具</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/static/assets/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/assets/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/assets/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/assets/apple-touch-icon.png">
+
+    <link href="/static/css/styles.css?v=4" rel="stylesheet">
+    <!-- 引入 Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- 引入 Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- 自定义样式 -->
+    <style>
+        /* 优化的深蓝色系配色方案 */
+        :root {
+            /* 主色调 - 深蓝色系 */
+            --primary-color: #007bff;        /* 标准深蓝色 - 主色调 */
+            --primary-hover: #0056b3;        /* 主色调悬停 */
+            --primary-light: #e3f2fd;        /* 主色调浅色背景 */
+            --primary-lighter: #f8fcff;      /* 主色调极浅背景 */
+            --primary-border: #80bdff;       /* 主色调边框 */
+            --primary-dark: #004085;         /* 主色调深色 */
+
+            /* 成功状态 - 传统绿色系 */
+            --success-color: #28a745;        /* 标准绿色 - 成功状态 */
+            --success-hover: #218838;        /* 成功状态悬停 */
+            --success-light: #d4edda;        /* 成功状态浅色背景 */
+
+            /* 次要色调 - 标准灰色系 */
+            --secondary-color: #6c757d;      /* 标准灰色 - 次要色调 */
+            --secondary-hover: #5a6268;      /* 次要色调悬停 */
+            --secondary-light: #f8f9fa;      /* 次要色调浅色背景 */
+
+            /* 警告状态 - 标准橙色系 */
+            --warning-color: #ffc107;        /* 标准橙色 - 警告状态 */
+            --warning-hover: #e0a800;        /* 警告状态悬停 */
+            --warning-light: #fff3cd;        /* 警告状态浅色背景 */
+
+            /* 危险状态 - 标准红色系 */
+            --danger-color: #dc3545;         /* 标准红色 - 危险状态 */
+            --danger-hover: #c82333;         /* 危险状态悬停 */
+            --danger-light: #f8d7da;         /* 危险状态浅色背景 */
+
+            /* 文字颜色 */
+            --text-primary: #2c3e50;         /* 主文字颜色 - 深蓝灰 */
+            --text-secondary: #5d6d7e;       /* 次要文字颜色 - 灰蓝 */
+            --text-muted: #85929e;           /* 弱化文字颜色 */
+
+            /* 边框和背景 */
+            --border-color: #d5dbdb;         /* 边框颜色 - 浅灰蓝 */
+            --border-light: #eaeded;         /* 浅边框颜色 */
+            --bg-light: #f8f9fa;             /* 浅色背景 */
+            --bg-white: #ffffff;             /* 白色背景 */
+
+            /* 阴影 */
+            --shadow-sm: 0 2px 4px rgba(0, 123, 255, 0.1);
+            --shadow-md: 0 4px 8px rgba(0, 123, 255, 0.15);
+            --shadow-lg: 0 8px 16px rgba(0, 123, 255, 0.2);
+        }
+
+        /* 统一的按钮样式 - 蓝色系 */
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-primary:hover,
+        .btn-primary:focus,
+        .btn-primary:active {
+            background-color: var(--primary-hover);
+            border-color: var(--primary-hover);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-outline-primary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+            background-color: transparent;
+        }
+
+        .btn-outline-primary:hover,
+        .btn-outline-primary:focus,
+        .btn-outline-primary:active {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-success:hover,
+        .btn-success:focus,
+        .btn-success:active {
+            background-color: var(--success-hover);
+            border-color: var(--success-hover);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-secondary:hover,
+        .btn-secondary:focus,
+        .btn-secondary:active {
+            background-color: var(--secondary-hover);
+            border-color: var(--secondary-hover);
+            color: white;
+        }
+
+        .btn-warning {
+            background-color: var(--warning-color);
+            border-color: var(--warning-color);
+            color: white;
+        }
+
+        .btn-warning:hover,
+        .btn-warning:focus,
+        .btn-warning:active {
+            background-color: var(--warning-hover);
+            border-color: var(--warning-hover);
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover,
+        .btn-danger:focus,
+        .btn-danger:active {
+            background-color: var(--danger-hover);
+            border-color: var(--danger-hover);
+            color: white;
+        }
+
+        /* 文本颜色统一 */
+        .text-primary {
+            color: var(--primary-color) !important;
+        }
+
+        .text-secondary {
+            color: var(--text-secondary) !important;
+        }
+
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+
+        /* 背景色统一 */
+        .bg-primary {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        .bg-success {
+            background-color: var(--success-color) !important;
+            color: white !important;
+        }
+
+        .bg-secondary {
+            background-color: var(--secondary-color) !important;
+            color: white !important;
+        }
+
+        .bg-warning {
+            background-color: var(--warning-color) !important;
+            color: white !important;
+        }
+
+        .bg-danger {
+            background-color: var(--danger-color) !important;
+            color: white !important;
+        }
+
+        .bg-light {
+            background-color: var(--bg-light) !important;
+            color: var(--text-primary) !important;
+        }
+
+        /* 状态徽章统一 */
+        .badge.bg-primary {
+            background-color: var(--primary-color) !important;
+            color: white !important;
+        }
+
+        .badge.bg-success {
+            background-color: var(--success-color) !important;
+            color: white !important;
+        }
+
+        .badge.bg-secondary {
+            background-color: var(--secondary-color) !important;
+            color: white !important;
+        }
+
+        .badge.bg-warning {
+            background-color: var(--warning-color) !important;
+            color: white !important;
+        }
+
+        .badge.bg-danger {
+            background-color: var(--danger-color) !important;
+            color: white !important;
+        }
+
+        /* 导航链接统一 - 使用深蓝色主色调 */
+        .nav-pills .nav-link.active {
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: var(--shadow-sm);
+            font-weight: 500;
+        }
+
+        .nav-pills .nav-link:hover {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+        }
+
+        .nav-pills .nav-link {
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+
+        /* 侧边栏导航特殊优化 */
+        .sidebar .nav-pills .nav-link.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .sidebar .nav-pills .nav-link:hover:not(.active) {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            border-radius: 6px;
+        }
+
+        /* 表格统一样式 */
+        .table-light {
+            background-color: var(--bg-light);
+        }
+
+        .table th {
+            color: var(--text-primary);
+            border-color: var(--border-color);
+            background-color: var(--primary-lighter);
+            font-weight: 600;
+        }
+
+        .table td {
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: var(--primary-light);
+        }
+
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: var(--primary-lighter);
+        }
+
+        /* 卡片和边框统一 */
+        .border-bottom {
+            border-color: var(--border-color) !important;
+        }
+
+        .border-end {
+            border-color: var(--border-color) !important;
+        }
+
+        .border {
+            border-color: var(--border-color) !important;
+        }
+
+        .card {
+            border-color: var(--border-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .card-header {
+            background-color: var(--primary-lighter);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        /* 表单控件统一 */
+        .form-control {
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-border);
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            color: var(--text-primary);
+        }
+
+        .form-select {
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .form-select:focus {
+            border-color: var(--primary-border);
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            color: var(--text-primary);
+        }
+
+        .form-label {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* 模态框统一样式 */
+        .modal-header {
+            background-color: var(--primary-color);
+            color: white;
+            border-bottom: 1px solid var(--primary-border);
+        }
+
+        .modal-content {
+            border-color: var(--border-color);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border-light);
+        }
+
+        /* 链接统一样式 */
+        a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: var(--primary-hover);
+            text-decoration: underline;
+        }
+
+        /* 侧边栏优化 */
+        .sidebar {
+            background-color: var(--bg-white);
+            border-color: var(--border-color);
+        }
+
+        .sidebar-header {
+            background-color: var(--primary-lighter);
+            border-color: var(--border-color);
+        }
+
+        /* 输入框占位符颜色 */
+        .form-control::placeholder,
+        .form-select::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        /* 工具提示和小文本 */
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+
+        .small, small {
+            color: var(--text-secondary);
+        }
+
+        /* 分隔线 */
+        hr {
+            border-color: var(--border-color);
+            opacity: 0.5;
+        }
+
+        /* 复选框和单选按钮 */
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .form-check-input:focus {
+            border-color: var(--primary-border);
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            background-color: var(--primary-color);
+        }
+
+        /* 警告框和提示框 */
+        .alert-primary {
+            background-color: var(--primary-light);
+            border-color: var(--primary-border);
+            color: var(--primary-dark);
+        }
+
+        .alert-success {
+            background-color: var(--success-light);
+            border-color: var(--success-color);
+            color: var(--success-hover);
+        }
+
+        .alert-warning {
+            background-color: var(--warning-light);
+            border-color: var(--warning-color);
+            color: var(--warning-hover);
+        }
+
+        .alert-danger {
+            background-color: var(--danger-light);
+            border-color: var(--danger-color);
+            color: var(--danger-hover);
+        }
+
+        /* 下拉菜单 */
+        .dropdown-menu {
+            border-color: var(--border-color);
+            box-shadow: var(--shadow-md);
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+        }
+
+        /* 分页 */
+        .page-link {
+            color: var(--primary-color);
+            border-color: var(--border-color);
+        }
+
+        .page-link:hover {
+            color: var(--primary-hover);
+            background-color: var(--primary-light);
+            border-color: var(--primary-border);
+        }
+
+        .page-item.active .page-link {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        /* 语言切换器样式 - 下拉选择框版本 */
+        .language-switcher {
+            margin-top: auto;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--bg-white);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .language-select {
+            font-size: 0.85rem;
+            padding: 0.375rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--bg-white);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .language-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        .language-select option {
+            padding: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        /* 侧边栏收缩状态下的语言切换器 */
+        .sidebar.collapsed .language-switcher {
+            padding: 0.75rem 0.5rem !important;
+        }
+
+        .sidebar.collapsed .language-select {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            text-align: center;
+            min-width: 50px;
+        }
+
+        /* 确保侧边栏有足够的底部空间给语言切换器 */
+        .sidebar {
+            position: relative;
+            padding-bottom: 70px; /* 为语言切换器留出空间 */
+        }
+
+        .sidebar .nav-pills {
+            margin-bottom: 1rem;
+        }
+
+        /* Logo样式 */
+        .logo-icon {
+            height: 30px;
+            width: auto;
+            transition: all 0.3s ease;
+            /* Removed color filter to display logo in original colors */
+        }
+
+        .sidebar.collapsed .logo-icon {
+            height: 26px;
+        }
+
+        .logo-fallback {
+            transition: all 0.3s ease;
+        }
+
+        /* 确保logo在收缩状态下正确显示 */
+        .sidebar.collapsed .title-text {
+            opacity: 0;
+            transform: translateX(-15px);
+            max-width: 0;
+            margin-left: 0;
+        }
+        /* 代理表格样式优化 - 确保列对齐 */
+        #proxiesTable {
+            table-layout: auto; /* 使用自适应布局 */
+            width: 100%;
+        }
+
+        /* 确保表头和数据行的列宽一致 */
+        #proxiesTable thead th,
+        #proxiesTable tbody td {
+            padding: 0.5rem;
+            vertical-align: middle;
+            border: 1px solid #dee2e6;
+        }
+
+        /* 名称列 */
+        #proxiesTable th:nth-child(1),
+        #proxiesTable td:nth-child(1) {
+            min-width: 120px;
+            max-width: 150px;
+            word-wrap: break-word;
+        }
+
+        /* 源服务列 */
+        #proxiesTable th:nth-child(2),
+        #proxiesTable td:nth-child(2) {
+            min-width: 100px;
+            max-width: 120px;
+            word-wrap: break-word;
+        }
+
+        /* 端点列 */
+        #proxiesTable th:nth-child(3),
+        #proxiesTable td:nth-child(3) {
+            min-width: 80px;
+            max-width: 100px;
+            word-wrap: break-word;
+        }
+
+        /* 类型列 */
+        #proxiesTable th:nth-child(4),
+        #proxiesTable td:nth-child(4) {
+            min-width: 120px;
+            white-space: nowrap;
+        }
+
+        /* 状态列 */
+        #proxiesTable th:nth-child(5),
+        #proxiesTable td:nth-child(5) {
+            min-width: 100px;
+            white-space: nowrap;
+        }
+
+        /* 自动启动列居中对齐 */
+        #proxiesTable th:nth-child(6),
+        #proxiesTable td:nth-child(6) {
+            text-align: center;
+            white-space: nowrap;
+            min-width: 80px;
+            max-width: 100px;
+        }
+
+        /* 访问链接列样式 */
+        #proxiesTable th:nth-child(7),
+        #proxiesTable td:nth-child(7) {
+            min-width: 250px; /* 确保有足够宽度显示URL和复制按钮 */
+        }
+
+        /* 工具列表列居中对齐 */
+        #proxiesTable th:nth-child(8),
+        #proxiesTable td:nth-child(8) {
+            text-align: center;
+            min-width: 120px;
+        }
+
+        /* 操作列居中对齐 */
+        #proxiesTable th:nth-child(9),
+        #proxiesTable td:nth-child(9) {
+            text-align: center;
+            white-space: nowrap;
+            min-width: 150px;
+        }
+
+        /* 访问链接代码块样式 */
+        #proxiesTable code {
+            background-color: #f8f9fa !important;
+            border: 1px solid #e9ecef;
+            color: #495057;
+            cursor: default;
+        }
+
+        /* 复制按钮样式 */
+        .copy-url-btn {
+            min-width: 32px;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .copy-url-btn:hover {
+            background-color: #e9ecef;
+        }
+
+        .copy-url-btn:disabled {
+            opacity: 0.8;
+        }
+
+        /* 表格内容垂直居中 */
+        #proxiesTable td {
+            vertical-align: middle;
+        }
+
+        /* 响应式处理 */
+        @media (max-width: 1200px) {
+            #proxiesTable .input-group-sm .form-control {
+                font-size: 0.7rem;
+            }
+
+            #proxiesTable th:nth-child(7),
+            #proxiesTable td:nth-child(7) {
+                min-width: 250px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #proxiesTable th,
+            #proxiesTable td {
+                padding: 0.25rem;
+                font-size: 0.8rem;
+            }
+
+            #proxiesTable th:nth-child(7),
+            #proxiesTable td:nth-child(7) {
+                min-width: 200px;
+            }
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: 250px;
+            min-height: 100vh; /* 全屏高度 */
+            transition: width 0.3s ease;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+        }
+
+        .sidebar.collapsed {
+            width: 70px;
+        }
+
+        .sidebar-header {
+            background-color: #f8f9fa;
+        }
+
+        .sidebar-title {
+            transition: all 0.3s ease;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        /* 收缩状态下平滑隐藏标题 */
+        .sidebar.collapsed .sidebar-title {
+            opacity: 0;
+            transform: translateX(-20px);
+            width: 0;
+            min-width: 0;
+        }
+
+        /* 标题文字的平滑过渡 */
+        .title-text {
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .sidebar.collapsed .title-text {
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+
+        /* 收缩状态下调整切换按钮位置 */
+        .sidebar.collapsed .sidebar-header {
+            justify-content: center;
+        }
+
+        .sidebar-nav {
+            padding: 1rem 0;
+        }
+
+        .sidebar .nav-link {
+            padding: 0.75rem 1rem;
+            margin: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            color: #495057;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar .nav-link:hover {
+            background-color: #e9ecef;
+            color: #212529;
+        }
+
+        .sidebar .nav-link.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+
+        .sidebar .nav-link i {
+            width: 20px;
+            text-align: center;
+            margin-right: 0.75rem;
+            transition: margin 0.3s ease;
+        }
+
+        /* 导航文字平滑动画 */
+        .nav-text {
+            transition: all 0.3s ease;
+            opacity: 1;
+            transform: translateX(0);
+            white-space: nowrap;
+            overflow: hidden;
+            display: inline-block;
+            max-width: 200px;
+        }
+
+        .sidebar.collapsed .nav-text {
+            opacity: 0;
+            transform: translateX(-15px);
+            max-width: 0;
+            margin-left: 0;
+        }
+
+        .sidebar.collapsed .nav-link i {
+            margin-right: 0;
+        }
+
+        .sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding: 0.75rem 0.5rem;
+        }
+
+        .main-content {
+            padding: 2rem 1.5rem 1.5rem 1.5rem; /* Increased left padding from 0.5rem to 1.5rem for better spacing */
+            min-height: 100vh;
+            overflow-x: auto;
+        }
+
+        /* 移动端菜单切换按钮 */
+        .mobile-menu-toggle {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1060;
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .mobile-menu-toggle:hover {
+            background-color: #0b5ed7;
+        }
+
+        /* 移动端样式 */
+        @media (max-width: 991.98px) {
+            .sidebar {
+                position: fixed;
+                top: 0; /* 从顶部开始 */
+                left: -250px;
+                z-index: 1050;
+                background-color: white;
+                box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.show {
+                left: 0;
+            }
+
+            .sidebar.collapsed {
+                width: 250px; /* 移动端不使用折叠模式 */
+            }
+
+            .main-content {
+                margin-left: 0 !important;
+                padding: 1rem;
+            }
+
+            .sidebar-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0,0,0,0.5);
+                z-index: 1040;
+                display: none;
+            }
+
+            .sidebar-overlay.show {
+                display: block;
+            }
+        }
+
+        /* 平板端样式 */
+        @media (min-width: 768px) and (max-width: 991.98px) {
+            .sidebar {
+                width: 70px; /* 平板端默认收缩 */
+            }
+        }
+
+        /* 桌面端样式 */
+        @media (min-width: 992px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+            }
+
+            .mobile-menu-toggle {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 移动端遮罩层 -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <!-- 主布局容器 -->
+    <div class="position-relative">
+        <!-- 左侧导航栏 -->
+        <nav id="sidebar" class="sidebar bg-light border-end position-fixed">
+            <!-- 侧边栏标题和切换按钮 -->
+            <div class="sidebar-header p-3 border-bottom d-flex align-items-center justify-content-between">
+                <h5 class="mb-0 sidebar-title text-primary fw-bold">
+                    <img src="/static/assets/logo.png" alt="MCP-Dock Logo" class="logo-icon me-2" onerror="this.src='/static/images/logo.svg'; this.onerror=function(){this.style.display='none'; this.nextElementSibling.style.display='inline';};">
+                    <i class="fas fa-cogs me-2 logo-fallback" style="display: none;"></i>
+                    <span class="title-text" data-i18n="sidebar.title">MCP-Dock</span>
+                </h5>
+                <button id="sidebarToggle" class="btn btn-outline-primary btn-sm" data-i18n-title="sidebar.toggle" title="切换侧边栏">
+                    <i class="fas fa-angle-double-left"></i>
+                </button>
+            </div>
+
+            <!-- 导航菜单 -->
+            <div class="sidebar-nav">
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" data-bs-toggle="tab" data-bs-target="#serversTab" id="serversNavLink">
+                            <i class="fas fa-server"></i>
+                            <span class="nav-text" data-i18n="nav.services">MCP 服务管理</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-bs-toggle="tab" data-bs-target="#proxiesTab" id="proxiesNavLink">
+                            <i class="fas fa-network-wired"></i>
+                            <span class="nav-text" data-i18n="nav.proxies">MCP 代理管理</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 移动端菜单切换按钮 -->
+            <button class="mobile-menu-toggle d-lg-none" type="button" id="mobileMenuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </nav>
+
+        <!-- 主内容区域 -->
+        <main id="mainContent" class="main-content">
+        <div class="tab-content">
+            <!-- MCP 服务标签页 -->
+            <div class="tab-pane fade show active" id="serversTab">
+                <!-- 操作按钮区域 -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0 text-primary">
+                        <i class="fas fa-server me-2"></i><span data-i18n="services.title">MCP 服务管理</span>
+                    </h4>
+                    <div class="btn-group" role="group">
+                        <button id="importConfigBtn" class="btn btn-outline-secondary">
+                            <i class="fas fa-file-import me-1"></i><span data-i18n="services.import">导入配置</span>
+                        </button>
+                        <button id="addServerBtn" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i><span data-i18n="services.add">添加服务</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-bordered mb-0" id="serversTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th data-i18n="services.table.name">名称</th>
+                                        <th data-i18n="services.table.type">类型</th>
+                                        <th data-i18n="services.table.status">状态</th>
+                                        <th data-i18n="services.table.autostart">自动启动</th>
+                                        <th data-i18n="services.table.tools">工具列表</th>
+                                        <th data-i18n="services.table.actions">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="serversList">
+                                    <!-- 服务列表将通过 JS 动态加载 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- MCP 代理标签页 -->
+            <div class="tab-pane fade" id="proxiesTab">
+                <!-- 操作按钮区域 -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0 text-primary">
+                        <i class="fas fa-network-wired me-2"></i><span data-i18n="proxies.title">MCP 代理</span>
+                    </h4>
+                    <div class="btn-group" role="group">
+                        <button id="addProxyBtn" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i><span data-i18n="proxies.add">添加代理</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <!-- BASE URL 配置区域 -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-globe me-2"></i><span data-i18n="baseurl.title">BASE URL 配置</span></h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <label for="baseUrlInput" class="form-label" data-i18n="baseurl.title">全局 BASE URL</label>
+                                        <input type="url" class="form-control" id="baseUrlInput" data-i18n-placeholder="baseurl.input.placeholder" placeholder="例如：http://10.10.10.118:8000 或 https://mydomain.com">
+                                        <div class="form-text" data-i18n="baseurl.help">配置后将应用到所有代理的访问链接。留空则使用默认地址。</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="btn-group mt-2" role="group">
+                                            <button type="button" class="btn btn-primary" id="saveBaseUrlBtn">
+                                                <i class="fas fa-save me-1"></i><span data-i18n="baseurl.save">保存配置</span>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" id="resetBaseUrlBtn">
+                                                <i class="fas fa-undo me-1"></i><span data-i18n="baseurl.reset">重置为默认</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                        <div class="table-responsive">
+                            <table class="table table-hover table-bordered mb-0" id="proxiesTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th data-i18n="proxies.table.name">名称</th>
+                                        <th data-i18n="proxies.table.target">源服务</th>
+                                        <th data-i18n="proxies.table.endpoint">端点</th>
+                                        <th data-i18n="proxies.table.type">类型</th>
+                                        <th data-i18n="proxies.table.status">状态</th>
+                                        <th data-i18n="proxies.table.autostart">自动启动</th>
+                                        <th data-i18n="proxies.table.access">访问链接</th>
+                                        <th data-i18n="proxies.table.tools">工具列表</th>
+                                        <th data-i18n="proxies.table.actions">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="proxiesList">
+                                    <!-- 代理列表将通过 JS 动态加载 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加服务器模态框 -->
+    <div class="modal fade" id="addServerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" data-i18n="modal.add.service">添加 MCP 服务</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addServerForm">
+                        <div class="mb-3">
+                            <label for="serverName" class="form-label"><span class="text-danger">*</span> <span data-i18n="form.service.name">服务名称</span></label>
+                            <input type="text" class="form-control" id="serverName" name="name" required data-i18n-placeholder="placeholder.service.name" placeholder="输入服务名称">
+                        </div>
+                        <div class="mb-3">
+                            <label for="transportType" class="form-label"><span class="text-danger">*</span> <span data-i18n="form.service.type">传输类型</span></label>
+                            <select class="form-select" id="transportType" name="transport_type" required>
+                                <option value="stdio" data-i18n="option.type.stdio">标准输入/输出 (stdio)</option>
+                                <option value="sse" data-i18n="option.type.sse">服务器发送事件 (sse)</option>
+                                <option value="streamableHTTP" data-i18n="option.type.streamable">可流式传输的HTTP (streamableHTTP)</option>
+                            </select>
+                        </div>
+
+
+                        <!-- stdio 专用字段 -->
+                        <div id="stdioFields">
+                            <div class="mb-3">
+                                <label for="command" class="form-label"><span class="text-danger">*</span> <span data-i18n="form.service.command">命令</span></label>
+                                <input type="text" class="form-control" id="command" name="command" data-i18n-placeholder="placeholder.service.command" placeholder="uvx or npx">
+                            </div>
+                            <div class="mb-3">
+                                <label for="args" class="form-label"><span data-i18n="form.service.args">参数</span> <i class="fas fa-question-circle" title="每行一个参数"></i></label>
+                                <textarea class="form-control" id="args" name="args" rows="2" data-i18n-placeholder="placeholder.service.args" placeholder="arg1\narg2"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="env" class="form-label"><span data-i18n="form.service.env">环境变量</span> <i class="fas fa-question-circle" title="每行KEY=VALUE"></i></label>
+                                <textarea class="form-control" id="env" name="env" rows="2" data-i18n-placeholder="placeholder.service.env" placeholder="KEY1=value1\nKEY2=value2"></textarea>
+                            </div>
+                        </div>
+                        <!-- sse/streamableHTTP 专用字段 -->
+                        <div id="httpFields" style="display:none;">
+                            <div class="mb-3">
+                                <label for="url" class="form-label"><span class="text-danger">*</span> URL <i class="fas fa-question-circle" title="MCP服务端点URL"></i></label>
+                                <input type="text" class="form-control" id="url" name="url" placeholder="http://localhost:3000/sse">
+                            </div>
+                            <div class="mb-3">
+                                <label for="headers" class="form-label">请求头 <i class="fas fa-question-circle" title="每行KEY=VALUE"></i></label>
+                                <textarea class="form-control" id="headers" name="headers" rows="2" placeholder="Content-Type=application/json\nAuthorization=Bearer token"></textarea>
+                            </div>
+                        </div>
+                        
+
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="autoStart" name="auto_start" checked>
+                            <label class="form-check-label" for="autoStart" id="autoStartLabel" data-i18n="form.service.autostart">自动启动</label>
+                            <div class="form-text" id="autoStartText" data-i18n="form.service.autostart.help">勾选后，系统启动时将自动启动此服务</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="action.cancel">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveServerBtn" data-i18n="action.save">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑服务器模态框 -->
+    <div class="modal fade" id="editServerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">编辑 MCP 服务</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editServerForm">
+                        <input type="hidden" id="editServerOriginalName" name="originalName">
+                        <div class="mb-3">
+                            <label for="editServerName" class="form-label">服务名称</label>
+                            <input type="text" class="form-control" id="editServerName" name="new_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editTransportType" class="form-label">传输类型</label>
+                            <select class="form-select" id="editTransportType" name="transport_type">
+                                <option value="stdio">stdio</option>
+                                <option value="sse">SSE</option>
+                                <option value="streamableHTTP">streamableHTTP</option>
+                            </select>
+                        </div>
+
+
+                        <div id="editStdioFields">
+                            <div class="mb-3">
+                                <label for="editCommand" class="form-label">命令</label>
+                                <input type="text" class="form-control" id="editCommand" name="command" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editArgs" class="form-label">参数 (JSON 数组格式)</label>
+                                <input type="text" class="form-control" id="editArgs" name="args">
+                                <div class="form-text">例如: ["--arg1", "value1", "--arg2"]</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editEnv" class="form-label">环境变量 (JSON 对象格式)</label>
+                                <input type="text" class="form-control" id="editEnv" name="env">
+                                <div class="form-text">例如: {"VAR1": "value1", "VAR2": "value2"}</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="editCwd" class="form-label">工作目录 (可选)</label>
+                                <input type="text" class="form-control" id="editCwd" name="cwd">
+                            </div>
+
+                        </div>
+                        <div id="editHttpFields" style="display:none;">
+                            <div class="mb-3">
+                                <label for="editUrl" class="form-label"><span class="text-danger">*</span> URL</label>
+                                <input type="text" class="form-control" id="editUrl" name="url" placeholder="http://localhost:3000/sse">
+                            </div>
+                            <div class="mb-3">
+                                <label for="editHeaders" class="form-label">请求头</label>
+                                <textarea class="form-control" id="editHeaders" name="headers" rows="2" placeholder="Content-Type=application/json\nAuthorization=Bearer token"></textarea>
+                            </div>
+                        </div>
+
+                        
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="editAutoStart" name="auto_start">
+                            <label class="form-check-label" for="editAutoStart" id="editAutoStartLabel">自动启动</label>
+                            <div class="form-text" id="editAutoStartText">勾选后，系统启动时将自动启动此服务</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="updateServerBtn">更新</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导入配置模态框 -->
+    <div class="modal fade" id="importConfigModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" data-i18n="import.title">导入 MCP 配置</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="importConfigForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="configFile" class="form-label" data-i18n="import.file.label">选择配置文件 (JSON)</label>
+                            <input type="file" class="form-control" id="configFile" name="file" accept=".json">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="common.cancel">取消</button>
+                    <button type="button" class="btn btn-primary" id="importConfigSubmitBtn" data-i18n="import.button">导入</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 添加代理模态框 -->
+    <div class="modal fade" id="addProxyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" data-i18n="modal.add.proxy">添加 MCP 代理</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addProxyForm">
+                        <div class="mb-3">
+                            <label for="proxyName" class="form-label"><span class="text-danger">*</span> <span data-i18n="form.proxy.name">名称</span></label>
+                            <input type="text" class="form-control" id="proxyName" name="name" required data-i18n-placeholder="placeholder.proxy.name" placeholder="代理名称">
+                        </div>
+                        <div class="mb-3">
+                            <label for="proxyServerName" class="form-label"><span class="text-danger">*</span> <span data-i18n="form.proxy.target">源服务</span></label>
+                            <select class="form-select" id="proxyServerName" name="server_name" required>
+                                <option value="" data-i18n="placeholder.proxy.target">请选择源服务...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="proxyEndpoint" class="form-label" data-i18n="form.proxy.endpoint">代理端点</label>
+                            <input type="text" class="form-control" id="proxyEndpoint" name="endpoint" value="/mcp" data-i18n-placeholder="placeholder.proxy.endpoint" placeholder="/mcp">
+                            <div class="form-text" data-i18n="tip.proxy.endpoint">对外暴露的端点路径，例如：/mcp</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="proxyTransportType" class="form-label" data-i18n="form.proxy.type">传输类型</label>
+                            <select class="form-select" id="proxyTransportType" name="transport_type">
+                                <option value="streamableHTTP" data-i18n="option.type.streamable">StreamableHTTP</option>
+                                <option value="sse" data-i18n="option.type.sse">SSE</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="proxyExposedTools" class="form-label"><span data-i18n="form.proxy.tools">暴露的工具</span> <i class="fas fa-question-circle" title="每行一个工具名称，留空表示全部暴露"></i></label>
+                            <textarea class="form-control" id="proxyExposedTools" name="exposed_tools" rows="4" data-i18n-placeholder="placeholder.proxy.tools" placeholder="每行一个工具名称，留空表示全部暴露"></textarea>
+                            <div class="form-text" data-i18n="form.proxy.tools.help">每行一个工具名称，留空表示全部暴露</div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="proxyAutoStart" name="auto_start" checked>
+                            <label class="form-check-label" for="proxyAutoStart" data-i18n="form.proxy.autostart">自动启动</label>
+                            <div class="form-text" data-i18n="form.proxy.autostart.help">勾选后，系统启动时将自动启动此代理</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="action.cancel">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveProxyBtn" data-i18n="action.save">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 编辑代理模态框 -->
+    <div class="modal fade" id="editProxyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">编辑 MCP 代理</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editProxyForm">
+                        <input type="hidden" id="editProxyOriginalName" name="originalName">
+                        <div class="mb-3">
+                            <label for="editProxyName" class="form-label"><span class="text-danger">*</span> 名称</label>
+                            <input type="text" class="form-control" id="editProxyName" name="name" required placeholder="代理名称">
+                        </div>
+                        <div class="mb-3">
+                            <label for="editProxyServerName" class="form-label"><span class="text-danger">*</span> 源服务</label>
+                            <select class="form-select" id="editProxyServerName" name="server_name" required>
+                                <option value="">请选择源服务...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editProxyEndpoint" class="form-label">代理端点</label>
+                            <input type="text" class="form-control" id="editProxyEndpoint" name="endpoint" placeholder="/mcp">
+                            <div class="form-text">对外暴露的端点路径，例如：/mcp</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editProxyTransportType" class="form-label">传输类型</label>
+                            <select class="form-select" id="editProxyTransportType" name="transport_type">
+                                <option value="streamableHTTP">StreamableHTTP</option>
+                                <option value="sse">SSE</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editProxyExposedTools" class="form-label">暴露的工具 <i class="fas fa-question-circle" title="每行一个工具名称，留空表示全部暴露"></i></label>
+                            <textarea class="form-control" id="editProxyExposedTools" name="exposed_tools" rows="4" placeholder="每行一个工具名称，留空表示全部暴露"></textarea>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="editProxyAutoStart" name="auto_start">
+                            <label class="form-check-label" for="editProxyAutoStart">自动启动</label>
+                            <div class="form-text">勾选后，系统启动时将自动启动此代理</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="updateProxyBtn">更新</button>
+                </div>
+            </div>
+        </div>
+    </div>
+        </main>
+    </div>
+
+    <!-- Toast 消息 -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+        <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <span id="toastMessage"></span>
+                </div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入 jQuery（必须在 Bootstrap 之前） -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- 引入 Bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 引入国际化系统 -->
+    <script src="/static/js/i18n.js?v=1747584999"></script>
+    <!-- 引入自定义 JavaScript，添加时间戳防缓存 -->
+    <script src="/static/js/main.js?v=1747584999"></script>
+</body>
+</html>
