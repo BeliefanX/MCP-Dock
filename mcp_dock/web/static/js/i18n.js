@@ -17,6 +17,7 @@ class I18n {
                 'services.import': '导入配置',
                 'services.refresh': '刷新列表',
                 'services.table.name': '名称',
+                'services.table.description': '描述',
                 'services.table.type': '类型',
                 'services.table.status': '状态',
                 'services.table.tools': '工具列表',
@@ -82,9 +83,16 @@ class I18n {
                 'form.service.type': '传输类型',
                 'form.service.command': '命令',
                 'form.service.args': '参数',
+                'form.service.args.json': '参数 (JSON 数组格式)',
                 'form.service.env': '环境变量',
+                'form.service.env.json': '环境变量 (JSON 对象格式)',
+                'form.service.description': '服务描述',
                 'form.service.autostart': '自动启动',
                 'form.service.autostart.help': '勾选后，系统启动时将自动启动此服务',
+
+                // 提示信息
+                'tip.service.args.json': '请输入有效的 JSON 数组格式，例如：["-y", "@notionhq/notion-mcp-server"]',
+                'tip.service.env.json': '请输入有效的 JSON 对象格式，例如：{"KEY": "value", "ANOTHER_KEY": "another_value"}',
                 
                 'form.proxy.name': '名称',
                 'form.proxy.target': '源服务',
@@ -233,6 +241,14 @@ class I18n {
                 'test.results.tools.count': '可用工具 ({count} 个)',
                 'test.results.no.tools': '暂无可用工具',
                 'test.results.no.description': '无描述',
+
+                // 默认值
+                'default.no.description': '无描述',
+
+                // 动作按钮
+                'action.edit.description': '更改描述',
+                'action.reset.description': '恢复默认描述',
+                'action.save': '保存',
                 'test.validation.name.required': '服务名称是必填项',
                 'test.validation.type.required': '传输类型是必填项',
                 'test.validation.command.required': 'stdio 传输需要命令',
@@ -258,6 +274,7 @@ class I18n {
                 'services.import': 'Import Config',
                 'services.refresh': 'Refresh List',
                 'services.table.name': 'Name',
+                'services.table.description': 'Description',
                 'services.table.type': 'Type',
                 'services.table.status': 'Status',
                 'services.table.tools': 'Tools List',
@@ -326,8 +343,13 @@ class I18n {
                 'form.service.cwd.optional': 'Working Directory (Optional)',
                 'form.service.url': 'URL',
                 'form.service.headers': 'Request Headers',
+                'form.service.description': 'Service Description',
                 'form.service.autostart': 'Auto Start',
                 'form.service.autostart.help': 'When checked, this service will start automatically on system startup',
+
+                // Tip messages
+                'tip.service.args.json': 'Please enter valid JSON array format, e.g.: ["-y", "@notionhq/notion-mcp-server"]',
+                'tip.service.env.json': 'Please enter valid JSON object format, e.g.: {"KEY": "value", "ANOTHER_KEY": "another_value"}',
 
                 'form.proxy.name': 'Name',
                 'form.proxy.target': 'Source Service',
@@ -501,6 +523,14 @@ class I18n {
                 'test.results.tools.count': 'Available Tools ({count} items)',
                 'test.results.no.tools': 'No tools available',
                 'test.results.no.description': 'No description',
+
+                // Default values
+                'default.no.description': 'No Description',
+
+                // Action buttons
+                'action.edit.description': 'Edit Description',
+                'action.reset.description': 'Reset to Default',
+                'action.save': 'Save',
                 'test.validation.name.required': 'Service name is required',
                 'test.validation.type.required': 'Transport type is required',
                 'test.validation.command.required': 'Command is required for stdio transport',

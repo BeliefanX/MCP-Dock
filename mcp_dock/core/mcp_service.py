@@ -47,6 +47,7 @@ class McpServerConfig:
         default_factory=dict,
     )  # Only for sse/streamableHTTP
     auto_start: bool = False  # For stdio type, whether to automatically start when the management tool starts
+    description: str = ""  # Custom description for the service
 
 
 @dataclass
@@ -60,6 +61,7 @@ class McpServerInstance:
     start_time: float | None = None
     error_message: str | None = None
     tools: list[dict[str, Any]] = field(default_factory=list)  # MCP tool list
+    server_info: dict[str, Any] = field(default_factory=dict)  # Original server info from MCP server
 
     def __hash__(self):
         """Make McpServerInstance hashable based on server name"""
@@ -249,6 +251,7 @@ class McpServiceManager:
                             auto_start=bool(auto_start_value)
                             if auto_start_value is not None
                             else False,
+                            description=get_field(server_config, "description") or "",
                         )
                         self.servers[name] = McpServerInstance(config=server)
                 logger.info(f"Loaded {len(self.servers)} server configurations")
@@ -273,6 +276,7 @@ class McpServiceManager:
                 "url": cfg.url,
                 "headers": cfg.headers,
                 "auto_start": cfg.auto_start,
+                "description": cfg.description,
             }
         try:
             with open(self.config_path, "w") as f:
@@ -1087,7 +1091,26 @@ class McpServiceManager:
                 async def connect_stdio_and_get_tools():
                     async with stdio_client(params) as (read, write):
                         async with ClientSession(read, write) as session:
-                            await session.initialize()
+                            init_result = await session.initialize()
+
+                            # Store server info from initialization
+                            if hasattr(init_result, 'serverInfo') and init_result.serverInfo:
+                                server_info_obj = init_result.serverInfo
+                                server.server_info = {
+                                    'name': getattr(server_info_obj, 'name', ''),
+                                    'version': getattr(server_info_obj, 'version', ''),
+                                    'instructions': getattr(server_info_obj, 'instructions', ''),
+                                    'description': getattr(server_info_obj, 'description', '')
+                                }
+                            elif hasattr(init_result, 'server_info') and init_result.server_info:
+                                server_info_obj = init_result.server_info
+                                server.server_info = {
+                                    'name': getattr(server_info_obj, 'name', ''),
+                                    'version': getattr(server_info_obj, 'version', ''),
+                                    'instructions': getattr(server_info_obj, 'instructions', ''),
+                                    'description': getattr(server_info_obj, 'description', '')
+                                }
+
                             tools_result = await session.list_tools()
                             # 打印原始工具对象格式以便调试
                             logger.debug(
@@ -1206,7 +1229,17 @@ class McpServiceManager:
                                         write,
                                     ):
                                         async with ClientSession(read, write) as session:
-                                            await session.initialize()
+                                            init_result = await session.initialize()
+
+                                            # Store server info from initialization
+                                            if hasattr(init_result, 'serverInfo') and init_result.serverInfo:
+                                                server.server_info = {
+                                                    'name': getattr(init_result.serverInfo, 'name', ''),
+                                                    'version': getattr(init_result.serverInfo, 'version', ''),
+                                                    'instructions': getattr(init_result.serverInfo, 'instructions', ''),
+                                                    'description': getattr(init_result.serverInfo, 'description', '')
+                                                }
+
                                             tools_result = await session.list_tools()
                                             # 打印原始工具对象格式以便调试
                                             logger.debug(
@@ -1332,7 +1365,17 @@ class McpServiceManager:
                                 write,
                             ):
                                 async with ClientSession(read, write) as session:
-                                    await session.initialize()
+                                    init_result = await session.initialize()
+
+                                    # Store server info from initialization
+                                    if hasattr(init_result, 'serverInfo') and init_result.serverInfo:
+                                        server.server_info = {
+                                            'name': getattr(init_result.serverInfo, 'name', ''),
+                                            'version': getattr(init_result.serverInfo, 'version', ''),
+                                            'instructions': getattr(init_result.serverInfo, 'instructions', ''),
+                                            'description': getattr(init_result.serverInfo, 'description', '')
+                                        }
+
                                     tools_result = await session.list_tools()
                                     # 打印原始工具对象格式以便调试
                                     logger.debug(
@@ -1621,6 +1664,8 @@ class McpServiceManager:
             "headers": server.config.headers,
             "uptime": time.time() - server.start_time if server.start_time else None,
             "auto_start": server.config.auto_start,
+            "description": server.config.description,
+            "server_info": server.server_info,
         }
         if server.error_message:
             status_info["error"] = server.error_message
@@ -1736,6 +1781,7 @@ class McpServiceManager:
                         url=self._get_field_with_fallback(server_config, "url"),
                         headers=self._get_field_with_fallback(server_config, "headers", {}),
                         auto_start=bool(auto_start),
+                        description=self._get_field_with_fallback(server_config, "description", ""),
                     )
 
                     logger.info(f"Importing server '{name}' with transport_type: {transport_type}")

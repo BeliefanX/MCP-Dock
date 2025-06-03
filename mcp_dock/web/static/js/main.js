@@ -544,18 +544,55 @@ $(document).ready(function() {
     $('#resetAddDescriptionBtn').on('click', function() {
         const serverName = $('#proxyServerName').val();
         if (serverName) {
-            $('#proxyDescription').val(`MCP 服务 ${serverName}`);
-            $('#editAddDescriptionBtn').text('更改描述').removeClass('btn-primary').addClass('btn-outline-primary');
-            $('#proxyDescription').prop('readonly', true);
+            // 获取服务器的原始描述
+            $.ajax({
+                url: `/api/servers/${serverName}`,
+                type: 'GET',
+                success: function(server) {
+                    let originalDescription = "No Description";
+                    if (server.server_info && (server.server_info.instructions || server.server_info.description)) {
+                        originalDescription = server.server_info.instructions || server.server_info.description;
+                    } else if (server.description && server.description !== `MCP 服务 ${server.name}`) {
+                        originalDescription = server.description;
+                    }
+
+                    $('#proxyDescription').val(originalDescription);
+                    $('#editAddDescriptionBtn').text(window.i18n.t('action.edit.description')).removeClass('btn-primary').addClass('btn-outline-primary');
+                    $('#proxyDescription').prop('readonly', true);
+                },
+                error: function() {
+                    $('#proxyDescription').val("No Description");
+                    $('#editAddDescriptionBtn').text(window.i18n.t('action.edit.description')).removeClass('btn-primary').addClass('btn-outline-primary');
+                    $('#proxyDescription').prop('readonly', true);
+                }
+            });
         }
     });
 
     $('#resetDescriptionBtn').on('click', function() {
         const serverName = $('#editProxyServerName').val();
         if (serverName) {
-            $('#editProxyDescription').val(`MCP 服务 ${serverName}`);
-            $('#editDescriptionBtn').text('更改描述').removeClass('btn-primary').addClass('btn-outline-primary');
-            $('#editProxyDescription').prop('readonly', true);
+            // 获取服务器的原始描述
+            $.ajax({
+                url: `/api/servers/${serverName}`,
+                type: 'GET',
+                success: function(server) {
+                    let originalDescription = "No Description";
+                    if (server.server_info && (server.server_info.instructions || server.server_info.description)) {
+                        originalDescription = server.server_info.instructions || server.server_info.description;
+                    }
+                    // 注意：不再使用 server.description，因为它可能包含中文模板描述
+
+                    $('#editProxyDescription').val(originalDescription);
+                    $('#editDescriptionBtn').text(window.i18n.t('action.edit.description')).removeClass('btn-primary').addClass('btn-outline-primary');
+                    $('#editProxyDescription').prop('readonly', true);
+                },
+                error: function() {
+                    $('#editProxyDescription').val("No Description");
+                    $('#editDescriptionBtn').text(window.i18n.t('action.edit.description')).removeClass('btn-primary').addClass('btn-outline-primary');
+                    $('#editProxyDescription').prop('readonly', true);
+                }
+            });
         }
     });
 
@@ -597,7 +634,6 @@ $(document).ready(function() {
         const type = $('#transportType').val();
         const formData = new FormData();
         formData.append('name', $('#serverName').val());
-        formData.append('desc', $('#serverDesc').val());
         formData.append('transport_type', type);
         
         // 处理自动启动/连接选项(适用于所有服务类型)
@@ -729,7 +765,7 @@ $(document).ready(function() {
                 } else {
                     $('#editAutoStart').prop('checked', false);
                 }
-                
+
                 // 显示模态框
                 editServerModal.show();
             },
@@ -1216,6 +1252,8 @@ $(document).ready(function() {
         $('#editServerTestResult').hide();
         $('#editServerTestContent').empty();
     });
+
+
 });
 
 /**
@@ -2027,13 +2065,13 @@ $(document).on('click', '.edit-proxy-btn', function() {
                     $('#editProxyExposedTools').val((proxy.exposed_tools || []).join('\n'));
                     $('#editProxyAutoStart').prop('checked', proxy.auto_start || false);
 
-                    // 设置描述字段
-                    const description = proxy.description || `MCP 服务 ${proxy.server_name}`;
-                    $('#editProxyDescription').val(description);
-
-                    // 如果选择了服务，加载服务信息
+                    // 如果选择了服务，加载服务信息（这会设置正确的描述）
                     if (proxy.server_name) {
                         loadServerInfoForProxy(proxy.server_name, 'edit', proxy.exposed_tools || []);
+                    } else {
+                        // 如果没有选择服务，使用代理配置中的描述
+                        const description = proxy.description || "No Description";
+                        $('#editProxyDescription').val(description);
                     }
                     
                     // 显示模态框
@@ -2368,15 +2406,26 @@ function loadServerInfoForProxy(serverName, mode, selectedTools = []) {
         url: `/api/servers/${serverName}`,
         type: 'GET',
         success: function(server) {
-            // 设置默认描述
-            const defaultDescription = `MCP 服务 ${server.name}`;
+            // 获取服务器的原始描述，只使用 server_info 中的描述
+            let originalDescription = "No Description";
+            if (server.server_info && (server.server_info.instructions || server.server_info.description)) {
+                originalDescription = server.server_info.instructions || server.server_info.description;
+            }
+            // 注意：不再使用 server.description，因为它可能包含中文模板描述
 
             if (mode === 'add') {
-                $('#proxyDescription').val(defaultDescription);
+                $('#proxyDescription').val(originalDescription);
                 $('#proxyDescription').prop('readonly', true);
                 $('#editAddDescriptionBtn').text(window.i18n.t('action.edit.description')).removeClass('btn-primary').addClass('btn-outline-primary');
             } else {
-                $('#editProxyDescription').val(defaultDescription);
+                // 在编辑模式下，检查当前描述是否已被用户自定义
+                const currentDescription = $('#editProxyDescription').val();
+                // 如果当前描述为空、是默认模板或者是"No Description"，则使用原始描述
+                if (!currentDescription ||
+                    currentDescription.startsWith('MCP 服务') ||
+                    currentDescription === 'No Description') {
+                    $('#editProxyDescription').val(originalDescription);
+                }
                 $('#editProxyDescription').prop('readonly', true);
                 $('#editDescriptionBtn').text(window.i18n.t('action.edit.description')).removeClass('btn-primary').addClass('btn-outline-primary');
             }
@@ -2677,7 +2726,7 @@ function showTestResultInModal(serverInfo, mode) {
             </div>
             <div class="test-result-description">
                 <div class="description-text">
-                    ${serverInfo.description || `<em class="text-muted">${window.i18n.t('test.results.no.description')}</em>`}
+                    ${serverInfo.description || `<em class="text-muted">No Description</em>`}
                 </div>
             </div>
         </div>

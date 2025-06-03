@@ -309,6 +309,7 @@ async def add_server(
     url: str | None = Form(None),
     headers: str | None = Form(None),
     auto_start: bool | None = Form(False),
+    description: str | None = Form(""),
 ):
     """Add a new MCP server"""
     try:
@@ -340,6 +341,7 @@ async def add_server(
             url=url,
             headers=headers_list,
             auto_start=auto_start,
+            description=description or "",
         )
 
         # Check if server name already exists
@@ -431,6 +433,7 @@ async def update_server(
     url: str | None = Form(None),
     headers: str | None = Form(None),
     auto_start: str | None = Form(None),
+    description: str | None = Form(None),
 ) -> JSONResponse:
     """Update MCP server configuration"""
     try:
@@ -474,6 +477,7 @@ async def update_server(
             url=processed_url,
             headers=processed_headers,
             auto_start=auto_start_value,
+            description=description if description is not None else current_config.description,
         )
         success = manager.update_server(name, config)
         if success:
@@ -771,11 +775,22 @@ async def test_server(name: str) -> JSONResponse:
         success, tools = await manager.verify_mcp_server(name)
 
         if success:
+            # Get original server description from MCP server initialization
+            # Always prefer original server info over config description for test results
+            original_description = "No Description"
+            if hasattr(server, 'server_info') and server.server_info:
+                server_instructions = server.server_info.get('instructions', '').strip()
+                server_description = server.server_info.get('description', '').strip()
+                if server_instructions:
+                    original_description = server_instructions
+                elif server_description:
+                    original_description = server_description
+
             # Get server info for response
             server_info = {
                 "name": server.config.name,
                 "transport_type": server.config.transport_type,
-                "description": f"MCP 服务 {server.config.name}",  # Default description
+                "description": original_description,
                 "tools": tools,
                 "status": server.status
             }
@@ -843,7 +858,8 @@ async def test_server_config(request: Request) -> JSONResponse:
             args=config_data.get('args', []),
             env=config_data.get('env', {}),
             url=config_data.get('url'),
-            auto_start=False  # Don't auto-start test configs
+            auto_start=False,  # Don't auto-start test configs
+            description=config_data.get('description', "")
         )
 
         # Test the configuration by creating a temporary manager
@@ -863,9 +879,8 @@ async def test_server_config(request: Request) -> JSONResponse:
             if success:
                 # Get server info
                 status = "verified" if transport_type == 'stdio' else "connected"
-                description = "无描述"
-                if hasattr(temp_service, 'server_info') and temp_service.server_info:
-                    description = temp_service.server_info.get('description', '无描述')
+                # For temporary test, use original description or "No Description"
+                description = temp_config.description or "No Description"
 
                 server_info = {
                     "name": temp_config.name,

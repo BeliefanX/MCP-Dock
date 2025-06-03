@@ -568,9 +568,24 @@ class McpProxyManager:
                 logger.info(
                     f"Using already available tool list from server {server_name}: {len(server.tools)} tools",
                 )
-                proxy.tools = (
-                    server.tools.copy() if isinstance(server.tools, list) else []
-                )
+                tools = server.tools.copy() if isinstance(server.tools, list) else []
+
+                # Apply tool filtering
+                if proxy.config.exposed_tools:
+                    # If exposed tools list is specified, only expose tools with matching names
+                    filtered_tools = [
+                        t
+                        for t in tools
+                        if t.get("name", "") in proxy.config.exposed_tools
+                    ]
+                    logger.info(f"Filtered tool list: {len(filtered_tools)} tools from {len(tools)} total")
+                    logger.info(f"Exposed tools filter: {proxy.config.exposed_tools}")
+                    logger.info(f"Available tool names: {[t.get('name', '') for t in tools]}")
+                    proxy.tools = filtered_tools
+                else:
+                    # Otherwise expose all tools
+                    proxy.tools = tools
+
                 proxy.status = "running"
                 proxy.error_message = None
                 logger.info(
@@ -602,12 +617,10 @@ class McpProxyManager:
                     filtered_tools = [
                         t
                         for t in tools
-                        if any(
-                            pattern in t.get("name", "")
-                            for pattern in proxy.config.exposed_tools
-                        )
+                        if t.get("name", "") in proxy.config.exposed_tools
                     ]
-                    logger.info(f"Filtered tool list: {len(filtered_tools)} tools")
+                    logger.info(f"Filtered tool list: {len(filtered_tools)} tools from {len(tools)} total")
+                    logger.info(f"Exposed tools filter: {proxy.config.exposed_tools}")
                     proxy.tools = filtered_tools
                 else:
                     # Otherwise expose all tools
