@@ -213,6 +213,7 @@ class McpProxyConfig:
         default_factory=list,
     )  # List of tools to expose externally, empty means expose all
     auto_start: bool = False  # Whether to automatically start when the management tool starts
+    description: str = ""  # Custom description for the proxy service
 
 
 @dataclass(slots=True)
@@ -373,6 +374,7 @@ class McpProxyManager:
                             ),
                             exposed_tools=proxy_config.get("exposed_tools", []),
                             auto_start=proxy_config.get("auto_start", False),
+                            description=proxy_config.get("description", ""),
                         )
                         self.proxies[name] = McpProxyInstance(config=proxy)
                 logger.info(f"Loaded {len(self.proxies)} proxy configurations")
@@ -394,6 +396,7 @@ class McpProxyManager:
                 "transport_type": cfg.transport_type,
                 "exposed_tools": cfg.exposed_tools,
                 "auto_start": cfg.auto_start,
+                "description": cfg.description,
             }
         try:
             with open(self.config_path, "w") as f:
@@ -492,6 +495,7 @@ class McpProxyManager:
             "tools": proxy.tools,
             "exposed_tools": proxy.config.exposed_tools,
             "auto_start": proxy.config.auto_start,
+            "description": proxy.config.description,
         }
 
     def get_all_proxy_statuses(self) -> list[dict[str, Any]]:

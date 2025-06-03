@@ -32,6 +32,8 @@ MCP-Dock 是一个开源解决方案，为管理模型上下文协议 (MCP) 服�
 - 🎯 **MCP Inspector 兼容** - 完全兼容 MCP Inspector 进行调试和测试
 - 📊 **健康监控** - 监控和管理多个 MCP 服务的健康状态
 - 🔄 **协议转换** - 不同 MCP 传输协议之间的无缝转换
+- 🧪 **服务测试** - 一键测试 MCP 服务连接和工具获取功能
+- 🎛️ **代理定制** - 支持自定义代理描述和选择性工具暴露
 - ⚡ **自动恢复** - 自动服务恢复和会话管理
 - 🚀 **自动启动支持** - 应用启动时自动启动服务和代理
 - 🌍 **灵活的 BASE URL** - 可配置的全局 BASE URL，适应不同部署环境
@@ -371,15 +373,16 @@ export MCP_DOCK_PORT="8000"
 #### 服务管理
 | 端点 | 方法 | 描述 |
 |------|------|------|
-| `/api/service/` | GET | 列出所有服务及其连接状态 |
-| `/api/service/{name}/start` | POST | 启动特定服务 |
-| `/api/service/{name}/stop` | POST | 停止特定服务 |
-| `/api/service/{name}/restart` | POST | 重启特定服务 |
-| `/api/service/{name}/status` | GET | 获取详细服务状态 |
-| `/api/service/{name}/update-tools` | POST | 刷新服务工具列表 |
-| `/api/service/` | POST | 创建新的服务配置 |
-| `/api/service/{name}` | PUT | 更新服务配置 |
-| `/api/service/{name}` | DELETE | 删除服务配置 |
+| `/api/servers/` | GET | 列出所有服务及其连接状态 |
+| `/api/servers/{name}/start` | POST | 启动特定服务 |
+| `/api/servers/{name}/stop` | POST | 停止特定服务 |
+| `/api/servers/{name}/restart` | POST | 重启特定服务 |
+| `/api/servers/{name}/status` | GET | 获取详细服务状态 |
+| `/api/servers/{name}/verify` | POST | 验证服务并获取工具列表 |
+| `/api/servers/{name}/test` | POST | 测试服务初始化并获取服务信息 |
+| `/api/servers/` | POST | 创建新的服务配置 |
+| `/api/servers/{name}` | PUT | 更新服务配置 |
+| `/api/servers/{name}` | DELETE | 删除服务配置 |
 
 ### 动态代理端点
 

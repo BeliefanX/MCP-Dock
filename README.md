@@ -30,6 +30,8 @@ MCP-Dock is an open-source solution that provides a centralized platform for man
 - 🎯 **MCP Inspector Compatible** - Full compatibility with MCP Inspector for debugging and testing
 - 📊 **Health Monitoring** - Monitor and manage the health status of multiple MCP services
 - 🔄 **Protocol Conversion** - Seamless conversion between different MCP transport protocols
+- 🧪 **Service Testing** - One-click testing of MCP service connections and tool retrieval
+- 🎛️ **Proxy Customization** - Support for custom proxy descriptions and selective tool exposure
 - ⚡ **Auto-Recovery** - Automatic service recovery and session management
 - 🚀 **Auto-Start Support** - Automatic startup of services and proxies on application launch
 - 🌍 **Flexible BASE URL** - Configurable global BASE URL for different deployment environments
@@ -378,15 +380,16 @@ This project is licensed under the GPL v3 License - see the [LICENSE](LICENSE) f
 #### Service Management
 | Endpoint | Method | Description |
 |----------|--------|--------------|
-| `/api/service/` | GET | List all services with connection status |
-| `/api/service/{name}/start` | POST | Start a specific service |
-| `/api/service/{name}/stop` | POST | Stop a specific service |
-| `/api/service/{name}/restart` | POST | Restart a specific service |
-| `/api/service/{name}/status` | GET | Get detailed service status |
-| `/api/service/{name}/update-tools` | POST | Refresh service tool list |
-| `/api/service/` | POST | Create a new service configuration |
-| `/api/service/{name}` | PUT | Update service configuration |
-| `/api/service/{name}` | DELETE | Delete service configuration |
+| `/api/servers/` | GET | List all services with connection status |
+| `/api/servers/{name}/start` | POST | Start a specific service |
+| `/api/servers/{name}/stop` | POST | Stop a specific service |
+| `/api/servers/{name}/restart` | POST | Restart a specific service |
+| `/api/servers/{name}/status` | GET | Get detailed service status |
+| `/api/servers/{name}/verify` | POST | Verify service and get tool list |
+| `/api/servers/{name}/test` | POST | Test service initialization and get service info |
+| `/api/servers/` | POST | Create a new service configuration |
+| `/api/servers/{name}` | PUT | Update service configuration |
+| `/api/servers/{name}` | DELETE | Delete service configuration |
 
 ### Dynamic Proxy Endpoints
 

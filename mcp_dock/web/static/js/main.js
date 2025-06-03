@@ -320,16 +320,25 @@ window.addEventListener('unhandledrejection', function(e) {
 
 $(document).ready(function() {
     // 等待国际化系统初始化完成
-    if (typeof window.i18n !== 'undefined') {
-        // 应用国际化翻译
-        window.i18n.applyTranslations();
+    function initializeI18n() {
+        if (typeof window.i18n !== 'undefined') {
+            // 应用国际化翻译
+            window.i18n.applyTranslations();
 
-        // 为动态内容添加翻译支持
-        window.translateDynamicContent = function() {
-            if (typeof window.i18n !== 'undefined') {
-                window.i18n.applyTranslations();
-            }
-        };
+            // 为动态内容添加翻译支持
+            window.translateDynamicContent = function() {
+                if (typeof window.i18n !== 'undefined') {
+                    window.i18n.applyTranslations();
+                }
+            };
+            return true;
+        }
+        return false;
+    }
+
+    // 尝试初始化，如果失败则等待一下再试
+    if (!initializeI18n()) {
+        setTimeout(initializeI18n, 100);
     }
 
     // 初始化侧边栏
@@ -416,6 +425,10 @@ $(document).ready(function() {
         // 重置表单
         $('#addProxyForm')[0].reset();
 
+        // 隐藏服务信息和工具选择部分
+        $('#proxyServiceInfo').hide();
+        $('#proxyToolsSelection').hide();
+
         // 加载可用服务列表
         $.ajax({
             url: '/api/servers',
@@ -489,7 +502,96 @@ $(document).ready(function() {
     }
     $('#editTransportType').on('change', updateEditServerFormFields);
     updateEditServerFormFields();
-    
+
+    // 添加代理模态框中的服务选择变化事件
+    $('#proxyServerName').on('change', function() {
+        const selectedServer = $(this).val();
+        if (selectedServer) {
+            loadServerInfoForProxy(selectedServer, 'add');
+        } else {
+            $('#proxyServiceInfo').hide();
+            $('#proxyToolsSelection').hide();
+        }
+    });
+
+    // 编辑代理模态框中的服务选择变化事件
+    $('#editProxyServerName').on('change', function() {
+        const selectedServer = $(this).val();
+        if (selectedServer) {
+            loadServerInfoForProxy(selectedServer, 'edit');
+        } else {
+            $('#editProxyServiceInfo').hide();
+            $('#editProxyToolsSelection').hide();
+        }
+    });
+
+    // 描述编辑按钮事件
+    $('#editAddDescriptionBtn').on('click', function() {
+        const $input = $('#proxyDescription');
+        $input.prop('readonly', false);
+        $input.focus();
+        $(this).text(window.i18n.t('action.save')).removeClass('btn-outline-primary').addClass('btn-primary');
+    });
+
+    $('#editDescriptionBtn').on('click', function() {
+        const $input = $('#editProxyDescription');
+        $input.prop('readonly', false);
+        $input.focus();
+        $(this).text(window.i18n.t('action.save')).removeClass('btn-outline-primary').addClass('btn-primary');
+    });
+
+    // 恢复默认描述按钮事件
+    $('#resetAddDescriptionBtn').on('click', function() {
+        const serverName = $('#proxyServerName').val();
+        if (serverName) {
+            $('#proxyDescription').val(`MCP 服务 ${serverName}`);
+            $('#editAddDescriptionBtn').text('更改描述').removeClass('btn-primary').addClass('btn-outline-primary');
+            $('#proxyDescription').prop('readonly', true);
+        }
+    });
+
+    $('#resetDescriptionBtn').on('click', function() {
+        const serverName = $('#editProxyServerName').val();
+        if (serverName) {
+            $('#editProxyDescription').val(`MCP 服务 ${serverName}`);
+            $('#editDescriptionBtn').text('更改描述').removeClass('btn-primary').addClass('btn-outline-primary');
+            $('#editProxyDescription').prop('readonly', true);
+        }
+    });
+
+    // 工具全选/全不选按钮事件
+    $('#selectAllAddToolsBtn').on('click', function() {
+        $('#proxyToolsList .tool-checkbox').prop('checked', true);
+        $('#proxyToolsList .tool-checkbox').each(function() {
+            updateToolAppearance($(this));
+        });
+        updateSelectedToolsList('add');
+    });
+
+    $('#deselectAllAddToolsBtn').on('click', function() {
+        $('#proxyToolsList .tool-checkbox').prop('checked', false);
+        $('#proxyToolsList .tool-checkbox').each(function() {
+            updateToolAppearance($(this));
+        });
+        updateSelectedToolsList('add');
+    });
+
+    $('#selectAllToolsBtn').on('click', function() {
+        $('#editProxyToolsList .tool-checkbox').prop('checked', true);
+        $('#editProxyToolsList .tool-checkbox').each(function() {
+            updateToolAppearance($(this));
+        });
+        updateSelectedToolsList('edit');
+    });
+
+    $('#deselectAllToolsBtn').on('click', function() {
+        $('#editProxyToolsList .tool-checkbox').prop('checked', false);
+        $('#editProxyToolsList .tool-checkbox').each(function() {
+            updateToolAppearance($(this));
+        });
+        updateSelectedToolsList('edit');
+    });
+
     // 保存按钮处理
     $('#saveServerBtn').off('click').on('click', function() {
         const type = $('#transportType').val();
@@ -573,7 +675,7 @@ $(document).ready(function() {
                 loadServersList();
             },
             error: function(xhr) {
-                let errorMsg = '添加服务器失败';
+                let errorMsg = window.i18n.t('error.service.add');
                 if (xhr.responseJSON && xhr.responseJSON.detail) {
                     errorMsg += ': ' + xhr.responseJSON.detail;
                 }
@@ -763,19 +865,19 @@ $(document).ready(function() {
                     loadServersList();
                 },
                 error: function(xhr) {
-                    let errorMsg = '删除服务器失败';
+                    let errorMsg = window.i18n.t('error.service.delete');
                     if (xhr.responseJSON && xhr.responseJSON.detail) {
                         errorMsg += ': ' + xhr.responseJSON.detail;
                     }
                     showToast('danger', errorMsg);
                     $btn.prop('disabled', false);
-                    $btn.html('<i class="fas fa-trash"></i> 删除');
+                    $btn.html(`<i class="fas fa-trash"></i> ${window.i18n.t('button.delete')}`);
                     loadServersList();
                 }
             });
         } else {
             $btn.prop('disabled', false);
-            $btn.html('<i class="fas fa-trash"></i> 删除');
+            $btn.html(`<i class="fas fa-trash"></i> ${window.i18n.t('button.delete')}`);
         }
     });
     
@@ -846,19 +948,68 @@ $(document).ready(function() {
     $(document).on('click', '.verify-server-btn', function() {
         const serverName = $(this).data('server');
         const $btn = $(this);
-        
+
         // 显示加载状态
         $btn.prop('disabled', true);
         $btn.html('<i class="fas fa-spinner fa-spin"></i>');
-        
+
         // 调用验证函数，但不进行自动重试
         verifyMcpServer(serverName, false);
-        
+
         // 1秒后恢复按钮样式
         setTimeout(function() {
             $btn.prop('disabled', false);
             $btn.html('<i class="fas fa-list"></i> 获取列表');
         }, 1000);
+    });
+
+    // 添加服务模态框测试按钮点击事件
+    $('#testAddServerBtn').click(function() {
+        testServerInModal('add');
+    });
+
+    // 编辑服务模态框测试按钮点击事件
+    $('#testEditServerBtn').click(function() {
+        testServerInModal('edit');
+    });
+
+    // 测试服务按钮点击事件（表格中的测试按钮，保留用于兼容性）
+    $(document).on('click', '.test-server-btn', function() {
+        const serverName = $(this).data('server');
+        const $btn = $(this);
+        const originalHtml = $btn.html();
+
+        // 显示加载状态
+        $btn.prop('disabled', true);
+        $btn.html('<i class="fas fa-spinner fa-spin"></i> 测试中...');
+
+        // 调用测试API
+        $.ajax({
+            url: `/api/servers/${serverName}/test`,
+            type: 'POST',
+            success: function(response) {
+                // 恢复按钮状态
+                $btn.prop('disabled', false);
+                $btn.html(originalHtml);
+
+                // 显示测试结果
+                showTestResult(response.server_info);
+                showToast('success', response.message);
+            },
+            error: function(xhr) {
+                // 恢复按钮状态
+                $btn.prop('disabled', false);
+                $btn.html(originalHtml);
+
+                let errorMsg = `测试服务 ${serverName} 失败`;
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                } else if (xhr.responseJSON && xhr.responseJSON.detail) {
+                    errorMsg += ': ' + xhr.responseJSON.detail;
+                }
+                showToast('danger', errorMsg);
+            }
+        });
     });
     
     // 停止服务器
@@ -868,7 +1019,7 @@ $(document).ready(function() {
         const originalHtml = $btn.html();
 
         // 添加确认提示
-        if (!confirm(`确定要停止服务 "${serverName}" 吗？\n\n停止后需要手动重新启动。`)) {
+        if (!confirm(window.i18n.t('confirm.service.stop', {name: serverName}))) {
             return;
         }
 
@@ -910,7 +1061,7 @@ $(document).ready(function() {
         const originalHtml = $btn.html();
 
         // 添加确认提示
-        if (!confirm(`确定要重启服务 "${serverName}" 吗？\n\n重启过程中服务将暂时不可用。`)) {
+        if (!confirm(window.i18n.t('confirm.service.restart', {name: serverName}))) {
             return;
         }
 
@@ -1006,8 +1157,14 @@ $(document).ready(function() {
             $('#autoStartLabel').text('自动连接');
             $('#autoStartText').text('勾选后，系统启动时将自动连接此远程服务');
         }
+        updateTestButtonVisibility('add');
     });
     $('#transportType').trigger('change');
+
+    // 监听表单字段变化以更新测试按钮可见性
+    $('#serverName, #command, #url').on('input', function() {
+        updateTestButtonVisibility('add');
+    });
 
     // 编辑服务模态框类型切换
     $('#editTransportType').on('change', function() {
@@ -1023,9 +1180,109 @@ $(document).ready(function() {
             $('#editAutoStartLabel').text('自动连接');
             $('#editAutoStartText').text('勾选后，系统启动时将自动连接此远程服务');
         }
+        updateTestButtonVisibility('edit');
     });
     $('#editTransportType').trigger('change');
+
+    // 监听编辑表单字段变化以更新测试按钮可见性
+    $('#editServerName, #editCommand, #editUrl').on('input', function() {
+        updateTestButtonVisibility('edit');
+    });
+
+    // 模态框显示时初始化测试按钮
+    $('#addServerModal').on('shown.bs.modal', function() {
+        updateTestButtonVisibility('add');
+        // 确保国际化翻译被应用
+        if (typeof window.i18n !== 'undefined') {
+            window.i18n.applyTranslations();
+        }
+    });
+
+    $('#editServerModal').on('shown.bs.modal', function() {
+        updateTestButtonVisibility('edit');
+        // 确保国际化翻译被应用
+        if (typeof window.i18n !== 'undefined') {
+            window.i18n.applyTranslations();
+        }
+    });
+
+    // 模态框隐藏时重置测试结果
+    $('#addServerModal').on('hidden.bs.modal', function() {
+        $('#addServerTestResult').hide();
+        $('#addServerTestContent').empty();
+    });
+
+    $('#editServerModal').on('hidden.bs.modal', function() {
+        $('#editServerTestResult').hide();
+        $('#editServerTestContent').empty();
+    });
 });
+
+/**
+ * 更新测试按钮状态和验证
+ */
+function updateTestButtonVisibility(mode) {
+    const isEdit = mode === 'edit';
+
+    // 构建正确的字段 ID
+    const nameField = isEdit ? '#editServerName' : '#serverName';
+    const transportField = isEdit ? '#editTransportType' : '#transportType';
+    const commandField = isEdit ? '#editCommand' : '#command';
+    const urlField = isEdit ? '#editUrl' : '#url';
+
+    const name = $(nameField).val();
+    const transportType = $(transportField).val();
+
+    const $testBtn = $(`#test${isEdit ? 'Edit' : 'Add'}ServerBtn`);
+
+    // 总是显示测试按钮
+    $testBtn.show();
+
+    // 验证逻辑
+    const validation = validateTestFields(name, transportType, $(commandField).val(), $(urlField).val());
+
+    if (validation.isValid) {
+        $testBtn.prop('disabled', false);
+        $testBtn.attr('title', '');
+        $testBtn.find('i').removeClass('fa-exclamation-triangle').addClass('fa-vial');
+    } else {
+        $testBtn.prop('disabled', true);
+        $testBtn.attr('title', validation.message);
+        $testBtn.find('i').removeClass('fa-vial').addClass('fa-exclamation-triangle');
+    }
+}
+
+/**
+ * 验证测试字段
+ */
+function validateTestFields(name, transportType, command, url) {
+    if (!name || name.trim() === '') {
+        return { isValid: false, message: window.i18n.t('test.validation.name.required') };
+    }
+
+    if (!transportType) {
+        return { isValid: false, message: window.i18n.t('test.validation.type.required') };
+    }
+
+    if (transportType === 'stdio') {
+        if (!command || command.trim() === '') {
+            return { isValid: false, message: window.i18n.t('test.validation.command.required') };
+        }
+    } else {
+        if (!url || url.trim() === '') {
+            return { isValid: false, message: window.i18n.t('test.validation.url.required') };
+        }
+
+        // 简单的 URL 验证
+        try {
+            new URL(url);
+        } catch (e) {
+            return { isValid: false, message: window.i18n.t('test.validation.url.invalid') };
+        }
+    }
+
+    return { isValid: true, message: '' };
+}
 
 /**
  * 服务管理相关函数
@@ -1471,9 +1728,15 @@ function loadProxiesList() {
                                                 <tbody>`;
                     
                     proxy.tools.forEach(function(tool) {
+                        // 检查工具是否在代理的暴露工具列表中
+                        const isExposed = !proxy.exposed_tools || proxy.exposed_tools.length === 0 || proxy.exposed_tools.includes(tool.name);
+                        const statusBadge = isExposed
+                            ? `<span class="badge bg-success ms-2">${window.i18n.t('status.enabled')}</span>`
+                            : `<span class="badge bg-secondary ms-2">${window.i18n.t('status.disabled')}</span>`;
+
                         toolsHtml += `
                             <tr>
-                                <td>${tool.name || ''}</td>
+                                <td>${tool.name || ''}${statusBadge}</td>
                                 <td>${tool.description || ''}</td>
                             </tr>
                         `;
@@ -1620,13 +1883,15 @@ $(document).on('click', '#saveProxyBtn', function() {
     $btn.html('<i class="fas fa-spinner fa-spin"></i> ' + window.i18n.t('dynamic.saving'));
     
     // 获取表单数据
+    const exposedToolsValue = $('#proxyExposedTools').val() || '';
     const formData = {
         name: $('#proxyName').val(),
         server_name: $('#proxyServerName').val(),
         endpoint: $('#proxyEndpoint').val(),
         transport_type: $('#proxyTransportType').val(),
-        exposed_tools: $('#proxyExposedTools').val().split('\n').filter(Boolean).map(s => s.trim()),
-        auto_start: $('#proxyAutoStart').prop('checked')
+        exposed_tools: exposedToolsValue ? exposedToolsValue.split('\n').filter(Boolean).map(s => s.trim()) : [],
+        auto_start: $('#proxyAutoStart').prop('checked'),
+        description: $('#proxyDescription').val() || `MCP 服务 ${$('#proxyServerName').val()}`
     };
     
     // 简单验证
@@ -1659,17 +1924,17 @@ $(document).on('click', '#saveProxyBtn', function() {
             addProxyModal.hide();
             
             // 显示成功消息并刷新列表
-            showToast('success', response.message || '添加代理成功');
+            showToast('success', response.message || window.i18n.t('success.proxy.added'));
             loadProxiesList();
         },
         error: function(xhr, status, error) {
             // 恢复按钮状态
             $btn.prop('disabled', false);
             $btn.html(originalHtml);
-            
+
             // 显示错误信息
             console.error('添加代理失败:', xhr.responseText);
-            let errorMsg = '添加代理失败';
+            let errorMsg = window.i18n.t('error.proxy.add');
             if (xhr.responseJSON && xhr.responseJSON.detail) {
                 errorMsg += ': ' + xhr.responseJSON.detail;
             } else {
@@ -1694,11 +1959,11 @@ $(document).on('click', '.update-proxy-tools-btn', function() {
         url: `/api/proxy/${proxyName}/update-tools`,
         type: 'POST',
         success: function(response) {
-            showToast('success', `代理 ${proxyName} 工具列表更新成功，共 ${response.count} 个工具`);
+            showToast('success', window.i18n.t('success.proxy.tools.updated', {name: proxyName, count: response.count}));
             loadProxiesList();
         },
         error: function(xhr) {
-            let errorMsg = `更新代理 ${proxyName} 工具列表失败`;
+            let errorMsg = window.i18n.t('error.proxy.tools.update', {name: proxyName});
             if (xhr.responseJSON && xhr.responseJSON.detail) {
                 errorMsg += ': ' + xhr.responseJSON.detail;
             }
@@ -1761,6 +2026,15 @@ $(document).on('click', '.edit-proxy-btn', function() {
                     $('#editProxyTransportType').val(proxy.transport_type);
                     $('#editProxyExposedTools').val((proxy.exposed_tools || []).join('\n'));
                     $('#editProxyAutoStart').prop('checked', proxy.auto_start || false);
+
+                    // 设置描述字段
+                    const description = proxy.description || `MCP 服务 ${proxy.server_name}`;
+                    $('#editProxyDescription').val(description);
+
+                    // 如果选择了服务，加载服务信息
+                    if (proxy.server_name) {
+                        loadServerInfoForProxy(proxy.server_name, 'edit', proxy.exposed_tools || []);
+                    }
                     
                     // 显示模态框
                     $('#editProxyModal').modal('show');
@@ -1789,13 +2063,15 @@ $(document).on('click', '.edit-proxy-btn', function() {
 $(document).on('click', '#updateProxyBtn', function() {
     const originalName = $('#editProxyOriginalName').val();
     
+    const editExposedToolsValue = $('#editProxyExposedTools').val() || '';
     const formData = {
         name: $('#editProxyName').val(),
         server_name: $('#editProxyServerName').val(),
         endpoint: $('#editProxyEndpoint').val(),
         transport_type: $('#editProxyTransportType').val(),
-        exposed_tools: $('#editProxyExposedTools').val().split('\n').filter(Boolean).map(s => s.trim()),
-        auto_start: $('#editProxyAutoStart').prop('checked')
+        exposed_tools: editExposedToolsValue ? editExposedToolsValue.split('\n').filter(Boolean).map(s => s.trim()) : [],
+        auto_start: $('#editProxyAutoStart').prop('checked'),
+        description: $('#editProxyDescription').val() || `MCP 服务 ${$('#editProxyServerName').val()}`
     };
     
     // 简单验证
@@ -1816,11 +2092,11 @@ $(document).on('click', '#updateProxyBtn', function() {
         data: JSON.stringify(formData),
         success: function(response) {
             $('#editProxyModal').modal('hide');
-            showToast('success', response.message || '更新代理成功');
+            showToast('success', response.message || window.i18n.t('success.proxy.updated'));
             loadProxiesList();
         },
         error: function(xhr) {
-            let errorMsg = '更新代理失败';
+            let errorMsg = window.i18n.t('error.proxy.update');
             if (xhr.responseJSON && xhr.responseJSON.detail) {
                 errorMsg += ': ' + xhr.responseJSON.detail;
             }
@@ -1838,11 +2114,11 @@ $(document).on('click', '.delete-proxy-btn', function() {
             url: `/api/proxy/${proxyName}`,
             type: 'DELETE',
             success: function(response) {
-                showToast('success', response.message || `代理 ${proxyName} 删除成功`);
+                showToast('success', response.message || window.i18n.t('success.proxy.deleted', {name: proxyName}));
                 loadProxiesList();
             },
             error: function(xhr) {
-                let errorMsg = `删除代理 ${proxyName} 失败`;
+                let errorMsg = window.i18n.t('error.proxy.delete', {name: proxyName});
                 if (xhr.responseJSON && xhr.responseJSON.detail) {
                     errorMsg += ': ' + xhr.responseJSON.detail;
                 }
@@ -1943,7 +2219,7 @@ $(document).on('click', '.restart-proxy-btn', function() {
     const originalHtml = $btn.html();
 
     // 添加确认提示
-    if (!confirm(`确定要重启代理 "${proxyName}" 吗？\n\n重启过程中代理将暂时不可用。`)) {
+    if (!confirm(window.i18n.t('confirm.proxy.restart', {name: proxyName}))) {
         return;
     }
 
@@ -2068,6 +2344,454 @@ function fallbackCopyTextToClipboard(text, $btn, originalHtml) {
     }
 
     document.body.removeChild(textArea);
+}
+
+/**
+ * 加载服务信息用于代理配置
+ */
+function loadServerInfoForProxy(serverName, mode, selectedTools = []) {
+    // 显示加载状态
+    const loadingHtml = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> 正在加载服务信息...</div>';
+
+    if (mode === 'add') {
+        $('#proxyServiceInfo').show();
+        $('#proxyToolsSelection').show();
+        $('#proxyToolsList').html(loadingHtml);
+    } else {
+        $('#editProxyServiceInfo').show();
+        $('#editProxyToolsSelection').show();
+        $('#editProxyToolsList').html(loadingHtml);
+    }
+
+    // 获取服务信息
+    $.ajax({
+        url: `/api/servers/${serverName}`,
+        type: 'GET',
+        success: function(server) {
+            // 设置默认描述
+            const defaultDescription = `MCP 服务 ${server.name}`;
+
+            if (mode === 'add') {
+                $('#proxyDescription').val(defaultDescription);
+                $('#proxyDescription').prop('readonly', true);
+                $('#editAddDescriptionBtn').text(window.i18n.t('action.edit.description')).removeClass('btn-primary').addClass('btn-outline-primary');
+            } else {
+                $('#editProxyDescription').val(defaultDescription);
+                $('#editProxyDescription').prop('readonly', true);
+                $('#editDescriptionBtn').text(window.i18n.t('action.edit.description')).removeClass('btn-primary').addClass('btn-outline-primary');
+            }
+
+            // 显示工具列表
+            displayToolsForSelection(server.tools || [], mode, selectedTools);
+        },
+        error: function(xhr) {
+            console.error('获取服务信息失败:', xhr.responseText);
+            showToast('danger', window.i18n.t('error.service.info.load'));
+
+            if (mode === 'add') {
+                $('#proxyServiceInfo').hide();
+                $('#proxyToolsSelection').hide();
+            } else {
+                $('#editProxyServiceInfo').hide();
+                $('#editProxyToolsSelection').hide();
+            }
+        }
+    });
+}
+
+/**
+ * 显示工具选择列表
+ */
+function displayToolsForSelection(tools, mode, selectedTools = []) {
+    const containerId = mode === 'add' ? '#proxyToolsList' : '#editProxyToolsList';
+    const $container = $(containerId);
+
+    if (!tools || tools.length === 0) {
+        $container.html(`<div class="text-muted text-center py-3">${window.i18n.t('test.results.no.tools')}</div>`);
+        return;
+    }
+
+    let toolsHtml = '';
+    tools.forEach((tool, index) => {
+        const toolId = `${mode}Tool${index}`;
+        // 检查工具是否在选中列表中（编辑模式时使用已保存的选择，添加模式时默认全选）
+        const isSelected = mode === 'edit' ? selectedTools.includes(tool.name) : true;
+        const badgeClass = isSelected ? 'selected' : 'unselected';
+
+        toolsHtml += `
+            <div class="tool-item d-inline-block" data-tool-name="${tool.name}">
+                <input class="tool-checkbox" type="checkbox" value="${tool.name}" id="${toolId}" ${isSelected ? 'checked' : ''} style="display: none;">
+                <div class="tool-badge ${badgeClass}" data-tool="${tool.name}">
+                    <i class="fas fa-cog"></i>
+                    <span>${tool.name}</span>
+                </div>
+            </div>
+        `;
+    });
+
+    $container.html(toolsHtml);
+
+    // 绑定工具标签点击事件
+    $container.find('.tool-badge').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const $badge = $(this);
+        const $toolItem = $badge.closest('.tool-item');
+        const $checkbox = $toolItem.find('.tool-checkbox');
+
+        // 切换复选框状态
+        $checkbox.prop('checked', !$checkbox.is(':checked'));
+
+        // 更新外观和列表
+        updateToolAppearance($checkbox);
+        updateSelectedToolsList(mode);
+    });
+
+    // 绑定复选框变化事件（用于全选/全不选按钮）
+    $container.find('.tool-checkbox').on('change', function() {
+        updateToolAppearance($(this));
+        updateSelectedToolsList(mode);
+    });
+
+    // 初始更新选中的工具列表
+    updateSelectedToolsList(mode);
+}
+
+/**
+ * 更新工具外观（选中/未选中状态）
+ */
+function updateToolAppearance($checkbox) {
+    const $toolItem = $checkbox.closest('.tool-item');
+    const $badge = $toolItem.find('.tool-badge');
+
+    if ($checkbox.is(':checked')) {
+        $badge.removeClass('unselected').addClass('selected');
+    } else {
+        $badge.removeClass('selected').addClass('unselected');
+    }
+}
+
+/**
+ * 更新选中的工具列表（存储在隐藏字段中）
+ */
+function updateSelectedToolsList(mode) {
+    const containerId = mode === 'add' ? '#proxyToolsList' : '#editProxyToolsList';
+
+    const selectedTools = [];
+    $(containerId + ' .tool-checkbox:checked').each(function() {
+        selectedTools.push($(this).val());
+    });
+
+    // 将选中的工具存储在隐藏字段中，用于表单提交
+    const hiddenFieldId = mode === 'add' ? '#proxyExposedTools' : '#editProxyExposedTools';
+    $(hiddenFieldId).val(selectedTools.join('\n'));
+}
+
+/**
+ * 在模态框中测试服务
+ */
+function testServerInModal(mode) {
+    const isEdit = mode === 'edit';
+    const prefix = isEdit ? 'edit' : 'add';
+
+    // 获取表单数据
+    const formData = getServerFormData(mode);
+    if (!formData) {
+        showToast('warning', window.i18n.t('error.form.incomplete'));
+        return;
+    }
+
+    const $btn = $(`#test${isEdit ? 'Edit' : 'Add'}ServerBtn`);
+    const originalHtml = $btn.html();
+
+    // 显示加载状态
+    $btn.prop('disabled', true);
+    $btn.html(`<i class="fas fa-spinner fa-spin"></i> ${window.i18n.t('test.button.testing')}`);
+
+    // 如果是编辑模式，使用现有服务名称进行测试
+    let testUrl;
+    if (isEdit) {
+        const serverName = $('#editServerOriginalName').val();
+        testUrl = `/api/servers/${serverName}/test`;
+    } else {
+        // 添加模式，需要创建临时配置进行测试
+        testUrl = '/api/servers/test-config';
+    }
+
+    // 调用测试API
+    $.ajax({
+        url: testUrl,
+        type: 'POST',
+        data: isEdit ? undefined : JSON.stringify(formData),
+        contentType: isEdit ? undefined : 'application/json',
+        success: function(response) {
+            // 恢复按钮状态
+            $btn.prop('disabled', false);
+            $btn.html(originalHtml);
+
+            // 在模态框内显示测试结果
+            showTestResultInModal(response.server_info, mode);
+            showToast('success', response.message);
+        },
+        error: function(xhr) {
+            // 恢复按钮状态
+            $btn.prop('disabled', false);
+            $btn.html(originalHtml);
+
+            let errorMsg = window.i18n.t('error.service.test');
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMsg = xhr.responseJSON.message;
+            } else if (xhr.responseJSON && xhr.responseJSON.detail) {
+                errorMsg += ': ' + xhr.responseJSON.detail;
+            }
+            showToast('danger', errorMsg);
+        }
+    });
+}
+
+/**
+ * 获取服务表单数据
+ */
+function getServerFormData(mode) {
+    const isEdit = mode === 'edit';
+    const prefix = isEdit ? 'edit' : '';
+
+    const name = $(`#${prefix}${prefix ? 'S' : 's'}erverName`).val();
+    const transportType = $(`#${prefix}${prefix ? 'T' : 't'}ransportType`).val();
+
+    if (!name || !transportType) {
+        return null;
+    }
+
+    const formData = {
+        name: name,
+        transport_type: transportType,
+        auto_start: false // 测试时不需要自动启动
+    };
+
+    if (transportType === 'stdio') {
+        const command = $(`#${prefix}${prefix ? 'C' : 'c'}ommand`).val();
+        const args = $(`#${prefix}${prefix ? 'A' : 'a'}rgs`).val();
+        const env = $(`#${prefix}${prefix ? 'E' : 'e'}nv`).val();
+
+        if (!command) {
+            return null;
+        }
+
+        formData.command = command;
+
+        // 处理参数
+        if (args) {
+            if (isEdit) {
+                // 编辑模式，args是JSON格式
+                try {
+                    formData.args = JSON.parse(args);
+                } catch (e) {
+                    formData.args = [];
+                }
+            } else {
+                // 添加模式，args是每行一个参数
+                formData.args = args.split('\n').filter(arg => arg.trim());
+            }
+        } else {
+            formData.args = [];
+        }
+
+        // 处理环境变量
+        if (env) {
+            if (isEdit) {
+                // 编辑模式，env是JSON格式
+                try {
+                    formData.env = JSON.parse(env);
+                } catch (e) {
+                    formData.env = {};
+                }
+            } else {
+                // 添加模式，env是每行KEY=VALUE格式
+                formData.env = {};
+                env.split('\n').forEach(line => {
+                    const [key, ...valueParts] = line.split('=');
+                    if (key && valueParts.length > 0) {
+                        formData.env[key.trim()] = valueParts.join('=').trim();
+                    }
+                });
+            }
+        } else {
+            formData.env = {};
+        }
+    } else {
+        const url = $(`#${prefix}${prefix ? 'U' : 'u'}rl`).val();
+        if (!url) {
+            return null;
+        }
+        formData.url = url;
+    }
+
+    return formData;
+}
+
+/**
+ * 在模态框内显示测试结果
+ */
+function showTestResultInModal(serverInfo, mode) {
+    const prefix = mode === 'edit' ? 'edit' : 'add';
+    const $resultArea = $(`#${prefix}ServerTestResult`);
+    const $content = $(`#${prefix}ServerTestContent`);
+
+    // 构建测试结果内容
+    let contentHtml = `
+        <!-- 基本信息部分 -->
+        <div class="test-result-section">
+            <div class="test-result-header">
+                <i class="fas fa-info-circle text-primary"></i>
+                <h6 class="mb-0 text-primary">${window.i18n.t('test.results.basic.info')}</h6>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center mb-2">
+                        <strong class="me-2">${window.i18n.t('test.results.service.name')}:</strong>
+                        <span class="badge bg-primary">${serverInfo.name}</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center mb-2">
+                        <strong class="me-2">${window.i18n.t('test.results.transport.type')}:</strong>
+                        <span class="badge bg-info">${serverInfo.transport_type}</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex align-items-center mb-2">
+                        <strong class="me-2">${window.i18n.t('test.results.status')}:</strong>
+                        <span class="badge bg-success">${serverInfo.status}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 服务描述部分 -->
+        <div class="test-result-section">
+            <div class="test-result-header">
+                <i class="fas fa-file-alt text-info"></i>
+                <h6 class="mb-0 text-info">${window.i18n.t('test.results.description')}</h6>
+            </div>
+            <div class="test-result-description">
+                <div class="description-text">
+                    ${serverInfo.description || `<em class="text-muted">${window.i18n.t('test.results.no.description')}</em>`}
+                </div>
+            </div>
+        </div>
+
+        <!-- 工具列表部分 -->
+        <div class="test-result-section">
+            <div class="test-result-header">
+                <i class="fas fa-tools text-success"></i>
+                <h6 class="mb-0 text-success">${window.i18n.t('test.results.tools.count', {count: serverInfo.tools.length})}</h6>
+            </div>
+            <div class="test-result-tools-container">
+    `;
+
+    if (serverInfo.tools && serverInfo.tools.length > 0) {
+        contentHtml += '<div class="test-result-tools-grid">';
+
+        serverInfo.tools.forEach(tool => {
+            contentHtml += `
+                <div class="test-result-tool-badge">
+                    <i class="fas fa-cog"></i>
+                    <span>${tool.name || window.i18n.t('tool.unknown')}</span>
+                </div>
+            `;
+        });
+
+        contentHtml += '</div>';
+    } else {
+        contentHtml += `
+            <div class="test-result-no-tools">
+                <i class="fas fa-tools"></i>
+                <p class="mb-0">${window.i18n.t('test.results.no.tools')}</p>
+            </div>
+        `;
+    }
+
+    contentHtml += `
+            </div>
+        </div>
+    `;
+
+    $content.html(contentHtml);
+    $resultArea.show();
+}
+
+/**
+ * 显示测试结果模态框（保留用于兼容性）
+ */
+function showTestResult(serverInfo) {
+    const $content = $('#testResultContent');
+
+    // 构建测试结果内容
+    let contentHtml = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6 class="text-primary">基本信息</h6>
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>服务名称:</strong></td>
+                        <td>${serverInfo.name}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>传输类型:</strong></td>
+                        <td><span class="badge bg-info">${serverInfo.transport_type}</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>状态:</strong></td>
+                        <td><span class="badge bg-success">${serverInfo.status}</span></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-primary">服务描述</h6>
+                <div class="border rounded p-2 bg-light">
+                    <p class="mb-0">${serverInfo.description || '<em class="text-muted">无描述</em>'}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <h6 class="text-primary">可用工具 (${serverInfo.tools.length} 个)</h6>
+            <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+    `;
+
+    if (serverInfo.tools && serverInfo.tools.length > 0) {
+        contentHtml += '<div class="d-flex flex-wrap gap-2">';
+
+        serverInfo.tools.forEach(tool => {
+            contentHtml += `
+                <span class="badge bg-secondary fs-6 px-2 py-1">
+                    <i class="fas fa-tool"></i> ${tool.name || window.i18n.t('tool.unknown')}
+                </span>
+            `;
+        });
+
+        contentHtml += '</div>';
+    } else {
+        contentHtml += `
+            <div class="text-center text-muted py-3">
+                <i class="fas fa-tools fa-2x mb-2"></i>
+                <p>${window.i18n.t('test.results.no.tools')}</p>
+            </div>
+        `;
+    }
+
+    contentHtml += `
+            </div>
+        </div>
+    `;
+
+    $content.html(contentHtml);
+
+    // 显示模态框
+    const testResultModal = new bootstrap.Modal(document.getElementById('testResultModal'));
+    testResultModal.show();
 }
 
 /**

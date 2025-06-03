@@ -2,8 +2,8 @@
 MCP-Dock Version Information
 """
 
-__version__ = "0.1.1"
-__version_info__ = (0, 1, 1)
+__version__ = "0.2.0"
+__version_info__ = (0, 2, 0)
 
 # Application metadata
 APP_NAME = "MCP-Dock"

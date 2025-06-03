@@ -757,6 +757,152 @@ async def verify_server(name: str) -> JSONResponse:
         )
 
 
+@app.post("/api/servers/{name}/test")
+async def test_server(name: str) -> JSONResponse:
+    """Test MCP server initialization and get service info"""
+    try:
+        # Check if server exists
+        if name not in manager.servers:
+            raise HTTPException(status_code=404, detail=f"Server {name} not found")
+
+        server = manager.servers[name]
+
+        # Test server initialization based on transport type
+        success, tools = await manager.verify_mcp_server(name)
+
+        if success:
+            # Get server info for response
+            server_info = {
+                "name": server.config.name,
+                "transport_type": server.config.transport_type,
+                "description": f"MCP 服务 {server.config.name}",  # Default description
+                "tools": tools,
+                "status": server.status
+            }
+
+            return JSONResponse(
+                content={
+                    "message": f"服务 {name} 测试成功",
+                    "server_info": server_info,
+                    "success": True
+                }
+            )
+        else:
+            # Return error information
+            error_msg = server.error_message or "测试失败，无法连接到服务"
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "message": f"服务 {name} 测试失败: {error_msg}",
+                    "success": False
+                }
+            )
+
+    except Exception as e:
+        import traceback
+
+        error_details = f"{e!s}\n{traceback.format_exc()}"
+        logger.error(f"Test server error: {error_details}")
+        raise HTTPException(
+            status_code=500, detail=f"测试服务失败: {e!s}",
+        )
+
+
+@app.post("/api/servers/test-config")
+async def test_server_config(request: Request) -> JSONResponse:
+    """Test MCP server configuration without saving it"""
+    try:
+        # Parse request body
+        config_data = await request.json()
+
+        # Validate required fields
+        if not config_data.get('name'):
+            raise HTTPException(status_code=400, detail="服务名称不能为空")
+
+        if not config_data.get('transport_type'):
+            raise HTTPException(status_code=400, detail="传输类型不能为空")
+
+        transport_type = config_data['transport_type']
+
+        if transport_type == 'stdio':
+            if not config_data.get('command'):
+                raise HTTPException(status_code=400, detail="stdio 类型服务需要指定命令")
+        elif transport_type in ['sse', 'streamableHTTP']:
+            if not config_data.get('url'):
+                raise HTTPException(status_code=400, detail=f"{transport_type} 类型服务需要指定 URL")
+        else:
+            raise HTTPException(status_code=400, detail=f"不支持的传输类型: {transport_type}")
+
+        # Create temporary server config for testing
+        from mcp_dock.core.mcp_service import McpServerConfig, McpServerInstance
+
+        temp_config = McpServerConfig(
+            name=config_data['name'],
+            transport_type=transport_type,
+            command=config_data.get('command'),
+            args=config_data.get('args', []),
+            env=config_data.get('env', {}),
+            url=config_data.get('url'),
+            auto_start=False  # Don't auto-start test configs
+        )
+
+        # Test the configuration by creating a temporary manager
+        from mcp_dock.core.mcp_service import McpServiceManager
+
+        # Create a temporary manager for testing
+        temp_manager = McpServiceManager()
+
+        try:
+            # Add the temporary server to the manager
+            temp_service = McpServerInstance(temp_config)
+            temp_manager.servers[temp_config.name] = temp_service
+
+            # Test the configuration
+            success, tools = await temp_manager.verify_mcp_server(temp_config.name)
+
+            if success:
+                # Get server info
+                status = "verified" if transport_type == 'stdio' else "connected"
+                description = "无描述"
+                if hasattr(temp_service, 'server_info') and temp_service.server_info:
+                    description = temp_service.server_info.get('description', '无描述')
+
+                server_info = {
+                    "name": temp_config.name,
+                    "transport_type": temp_config.transport_type,
+                    "status": status,
+                    "description": description,
+                    "tools": tools or []
+                }
+
+                return JSONResponse({
+                    "success": True,
+                    "message": f"服务 {temp_config.name} 测试成功",
+                    "server_info": server_info
+                })
+            else:
+                error_msg = "服务初始化失败，无法获取工具列表" if transport_type == 'stdio' else "无法连接到远程服务"
+                raise HTTPException(status_code=400, detail=error_msg)
+
+        finally:
+            # Clean up temporary service
+            if temp_config.name in temp_manager.servers:
+                temp_service = temp_manager.servers[temp_config.name]
+                if hasattr(temp_service, 'stop'):
+                    await temp_service.stop()
+                del temp_manager.servers[temp_config.name]
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        error_details = f"{e!s}\n{traceback.format_exc()}"
+        logger.error(f"Test config error: {error_details}")
+        raise HTTPException(
+            status_code=500, detail=f"测试配置失败: {e!s}",
+        )
+
+
 @app.post("/api/import")
 async def import_config(file: UploadFile = File(...)) -> JSONResponse:
     """Import configuration from file"""

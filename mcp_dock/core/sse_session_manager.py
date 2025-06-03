@@ -5,10 +5,8 @@ Manages SSE sessions for MCP Inspector compatibility.
 """
 
 import asyncio
-import json
 import time
-import uuid
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from threading import Lock
 from collections import deque
@@ -423,30 +421,7 @@ class SSESessionManager:
 
             return stats
 
-    def force_cleanup_sessions(self, max_age_seconds: int = 60) -> int:
-        """Force cleanup sessions older than specified age (for testing)
 
-        Args:
-            max_age_seconds: Maximum age in seconds before cleanup
-
-        Returns:
-            Number of sessions cleaned up
-        """
-        expired_sessions = []
-        current_time = time.time()
-
-        with self.session_lock:
-            for session_id, session in self.sessions.items():
-                session_age = current_time - session.created_at
-                if session_age > max_age_seconds:
-                    expired_sessions.append(session_id)
-                    logger.info(f"Force cleanup session {session_id}: age={session_age:.1f}s > {max_age_seconds}s")
-
-            for session_id in expired_sessions:
-                session = self.sessions.pop(session_id)
-                logger.info(f"Force cleaned up session {session_id} for proxy {session.proxy_name}")
-
-        return len(expired_sessions)
 
     def clear_rate_limit_history(self, client_host: str = None) -> int:
         """Clear rate limiting history for a specific client or all clients

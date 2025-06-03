@@ -58,6 +58,7 @@ class ProxyRequest(BaseModel):
     transport_type: str | None = "streamableHTTP"
     exposed_tools: list[str] | None = []
     auto_start: bool | None = False
+    description: str | None = ""
 
 
 class ProxyUpdateRequest(BaseModel):
@@ -69,6 +70,7 @@ class ProxyUpdateRequest(BaseModel):
     transport_type: str | None = None
     exposed_tools: list[str] | None = None
     auto_start: bool | None = None
+    description: str | None = None
 
 
 class JsonRpcRequest(BaseModel):
@@ -91,17 +93,7 @@ async def get_session_stats():
     return stats
 
 
-@router.post("/debug/sessions/cleanup")
-async def force_cleanup_sessions(max_age_seconds: int = 60):
-    """Force cleanup sessions older than specified age (for testing)"""
-    from mcp_dock.core.sse_session_manager import SSESessionManager
-    session_manager = SSESessionManager.get_instance()
-    cleaned_count = session_manager.force_cleanup_sessions(max_age_seconds)
-    return {
-        "cleaned_sessions": cleaned_count,
-        "max_age_seconds": max_age_seconds,
-        "message": f"Cleaned up {cleaned_count} sessions older than {max_age_seconds} seconds"
-    }
+
 
 
 @router.post("/debug/rate-limit/clear")
@@ -246,6 +238,7 @@ async def create_proxy(request: ProxyRequest, managers: dict = Depends(get_manag
             transport_type=request.transport_type,
             exposed_tools=request.exposed_tools,
             auto_start=request.auto_start,
+            description=request.description or f"MCP 服务 {request.server_name}",
         )
 
         # Add proxy
@@ -315,6 +308,9 @@ async def update_proxy(
             auto_start=request.auto_start
             if request.auto_start is not None
             else current_proxy.get("auto_start", False),
+            description=request.description
+            if request.description is not None
+            else current_proxy.get("description", ""),
         )
 
         # Update proxy
@@ -541,7 +537,7 @@ async def start_proxy(
         proxy_instance.error_message = None
 
         # Update proxy tools from source server
-        success, tools = await proxy_manager.update_proxy_tools(name)
+        success, _ = await proxy_manager.update_proxy_tools(name)
         if not success:
             proxy_instance.status = "error"
             raise HTTPException(
@@ -604,7 +600,7 @@ async def restart_proxy(
 
         # Check if proxy exists
         try:
-            proxy = proxy_manager.get_proxy_status(name)
+            proxy_manager.get_proxy_status(name)
         except ValueError:
             raise HTTPException(status_code=404, detail=f"Proxy {name} does not exist")
 
@@ -661,7 +657,7 @@ async def restart_proxy(
         proxy_instance.status = "running"
 
         # Update proxy tools from source server
-        success, tools = await proxy_manager.update_proxy_tools(name)
+        success, _ = await proxy_manager.update_proxy_tools(name)
         if not success:
             proxy_instance.status = "error"
             raise HTTPException(
@@ -712,7 +708,7 @@ async def proxy_call(
         proxy_manager = managers["proxy_manager"]
 
         # Forward request
-        response = await proxy_manager.proxy_request(name, request.dict())
+        response = await proxy_manager.proxy_request(name, request.model_dump())
 
         return response
     except ValueError as e:
@@ -733,7 +729,7 @@ async def proxy_stream(
         proxy_manager = managers["proxy_manager"]
 
         # Create streaming response
-        response_generator = proxy_manager.create_proxy_stream(name, request.dict())
+        response_generator = proxy_manager.create_proxy_stream(name, request.model_dump())
 
         return StreamingResponse(
             response_generator,

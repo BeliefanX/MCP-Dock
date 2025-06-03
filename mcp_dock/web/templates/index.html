@@ -1085,8 +1085,24 @@
                             <div class="form-text" id="autoStartText" data-i18n="form.service.autostart.help">勾选后，系统启动时将自动启动此服务</div>
                         </div>
                     </form>
+
+                    <!-- 测试结果区域 -->
+                    <div id="addServerTestResult" style="display: none;" class="mt-4 p-3 border rounded bg-light">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-vial text-primary me-2"></i>
+                            <h6 class="mb-0 text-primary" data-i18n="test.results.title">测试结果</h6>
+                        </div>
+                        <div id="addServerTestContent" class="test-result-content">
+                            <!-- 测试结果内容将动态生成 -->
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
+                    <div class="me-auto">
+                        <button type="button" class="btn btn-outline-info" id="testAddServerBtn" style="display: none;">
+                            <i class="fas fa-vial"></i> <span data-i18n="test.button">测试连接</span>
+                        </button>
+                    </div>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="action.cancel">取消</button>
                     <button type="button" class="btn btn-primary" id="saveServerBtn" data-i18n="action.save">保存</button>
                 </div>
@@ -1099,18 +1115,18 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">编辑 MCP 服务</h5>
+                    <h5 class="modal-title" data-i18n="modal.edit.service">编辑 MCP 服务</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="editServerForm">
                         <input type="hidden" id="editServerOriginalName" name="originalName">
                         <div class="mb-3">
-                            <label for="editServerName" class="form-label">服务名称</label>
-                            <input type="text" class="form-control" id="editServerName" name="new_name" required>
+                            <label for="editServerName" class="form-label"><span class="text-danger">*</span> <span data-i18n="form.service.name">服务名称</span></label>
+                            <input type="text" class="form-control" id="editServerName" name="new_name" required data-i18n-placeholder="placeholder.service.name" placeholder="输入服务名称">
                         </div>
                         <div class="mb-3">
-                            <label for="editTransportType" class="form-label">传输类型</label>
+                            <label for="editTransportType" class="form-label" data-i18n="form.service.type">传输类型</label>
                             <select class="form-select" id="editTransportType" name="transport_type">
                                 <option value="stdio">stdio</option>
                                 <option value="sse">SSE</option>
@@ -1121,47 +1137,63 @@
 
                         <div id="editStdioFields">
                             <div class="mb-3">
-                                <label for="editCommand" class="form-label">命令</label>
-                                <input type="text" class="form-control" id="editCommand" name="command" required>
+                                <label for="editCommand" class="form-label"><span class="text-danger">*</span> <span data-i18n="form.service.command">命令</span></label>
+                                <input type="text" class="form-control" id="editCommand" name="command" required data-i18n-placeholder="placeholder.service.command" placeholder="uvx or npx">
                             </div>
                             <div class="mb-3">
-                                <label for="editArgs" class="form-label">参数 (JSON 数组格式)</label>
-                                <input type="text" class="form-control" id="editArgs" name="args">
-                                <div class="form-text">例如: ["--arg1", "value1", "--arg2"]</div>
+                                <label for="editArgs" class="form-label" data-i18n="form.service.args.json">参数 (JSON 数组格式)</label>
+                                <input type="text" class="form-control" id="editArgs" name="args" data-i18n-placeholder="placeholder.service.args.json" placeholder="例如: [&quot;--arg1&quot;, &quot;value1&quot;, &quot;--arg2&quot;]">
+                                <div class="form-text" data-i18n="tip.service.args.json">例如: ["--arg1", "value1", "--arg2"]</div>
                             </div>
                             <div class="mb-3">
-                                <label for="editEnv" class="form-label">环境变量 (JSON 对象格式)</label>
-                                <input type="text" class="form-control" id="editEnv" name="env">
-                                <div class="form-text">例如: {"VAR1": "value1", "VAR2": "value2"}</div>
+                                <label for="editEnv" class="form-label" data-i18n="form.service.env.json">环境变量 (JSON 对象格式)</label>
+                                <input type="text" class="form-control" id="editEnv" name="env" data-i18n-placeholder="placeholder.service.env.json" placeholder="例如: {&quot;VAR1&quot;: &quot;value1&quot;, &quot;VAR2&quot;: &quot;value2&quot;}">
+                                <div class="form-text" data-i18n="tip.service.env.json">例如: {"VAR1": "value1", "VAR2": "value2"}</div>
                             </div>
-                            <div class="mb-3">
-                                <label for="editCwd" class="form-label">工作目录 (可选)</label>
-                                <input type="text" class="form-control" id="editCwd" name="cwd">
+                            <div class="mb-3" style="display: none;">
+                                <label for="editCwd" class="form-label" data-i18n="form.service.cwd.optional">工作目录 (可选)</label>
+                                <input type="text" class="form-control" id="editCwd" name="cwd" data-i18n-placeholder="placeholder.service.cwd" placeholder="工作目录路径">
                             </div>
 
                         </div>
                         <div id="editHttpFields" style="display:none;">
                             <div class="mb-3">
-                                <label for="editUrl" class="form-label"><span class="text-danger">*</span> URL</label>
-                                <input type="text" class="form-control" id="editUrl" name="url" placeholder="http://localhost:3000/sse">
+                                <label for="editUrl" class="form-label"><span class="text-danger">*</span> <span data-i18n="form.service.url">URL</span></label>
+                                <input type="text" class="form-control" id="editUrl" name="url" data-i18n-placeholder="placeholder.service.url" placeholder="http://localhost:3000/sse">
                             </div>
                             <div class="mb-3">
-                                <label for="editHeaders" class="form-label">请求头</label>
-                                <textarea class="form-control" id="editHeaders" name="headers" rows="2" placeholder="Content-Type=application/json\nAuthorization=Bearer token"></textarea>
+                                <label for="editHeaders" class="form-label" data-i18n="form.service.headers">请求头</label>
+                                <textarea class="form-control" id="editHeaders" name="headers" rows="2" data-i18n-placeholder="placeholder.service.headers" placeholder="Content-Type=application/json\nAuthorization=Bearer token"></textarea>
                             </div>
                         </div>
 
                         
                         <div class="mb-3 form-check">
                             <input type="checkbox" class="form-check-input" id="editAutoStart" name="auto_start">
-                            <label class="form-check-label" for="editAutoStart" id="editAutoStartLabel">自动启动</label>
-                            <div class="form-text" id="editAutoStartText">勾选后，系统启动时将自动启动此服务</div>
+                            <label class="form-check-label" for="editAutoStart" id="editAutoStartLabel" data-i18n="form.service.autostart">自动启动</label>
+                            <div class="form-text" id="editAutoStartText" data-i18n="form.service.autostart.help">勾选后，系统启动时将自动启动此服务</div>
                         </div>
                     </form>
+
+                    <!-- 测试结果区域 -->
+                    <div id="editServerTestResult" style="display: none;" class="mt-4 p-3 border rounded bg-light">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-vial text-primary me-2"></i>
+                            <h6 class="mb-0 text-primary" data-i18n="test.results.title">测试结果</h6>
+                        </div>
+                        <div id="editServerTestContent" class="test-result-content">
+                            <!-- 测试结果内容将动态生成 -->
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-primary" id="updateServerBtn">更新</button>
+                    <div class="me-auto">
+                        <button type="button" class="btn btn-outline-info" id="testEditServerBtn">
+                            <i class="fas fa-vial"></i> <span data-i18n="test.button">测试连接</span>
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="action.cancel">取消</button>
+                    <button type="button" class="btn btn-primary" id="updateServerBtn" data-i18n="action.update">更新</button>
                 </div>
             </div>
         </div>
@@ -1211,6 +1243,43 @@
                                 <option value="" data-i18n="placeholder.proxy.target">请选择源服务...</option>
                             </select>
                         </div>
+
+                        <!-- 服务描述部分 -->
+                        <div class="mb-3" id="proxyServiceInfo" style="display: none;">
+                            <label for="proxyDescription" class="form-label" data-i18n="form.proxy.description">服务描述</label>
+                            <input type="text" class="form-control" id="proxyDescription" name="description" readonly>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="editAddDescriptionBtn" data-i18n="action.edit.description">更改描述</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="resetAddDescriptionBtn" data-i18n="action.reset.description">恢复默认描述</button>
+                            </div>
+                        </div>
+
+                        <!-- 工具选择部分 -->
+                        <div class="mb-3" id="proxyToolsSelection" style="display: none;">
+                            <label class="form-label">
+                                <i class="fas fa-tools text-primary me-2"></i>
+                                <span data-i18n="form.proxy.tools.selection">可用工具选择</span>
+                                <small class="text-muted" data-i18n="tip.proxy.tools.selection">(点击工具标签来选择/取消选择)</small>
+                            </label>
+                            <div class="border rounded p-3" style="max-height: 250px; overflow-y: auto;">
+                                <div class="mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllAddToolsBtn">
+                                        <i class="fas fa-check-square"></i> <span data-i18n="action.select.all">全选</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllAddToolsBtn">
+                                        <i class="fas fa-square"></i> <span data-i18n="action.deselect.all">全不选</span>
+                                    </button>
+                                    <span class="ms-3 text-muted small">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span data-i18n="tip.proxy.tools.help">选中的工具将在代理中可用，默认全部选中</span>
+                                    </span>
+                                </div>
+                                <div id="proxyToolsList" class="tools-selection-container">
+                                    <!-- 工具列表将动态生成为横向标签 -->
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label for="proxyEndpoint" class="form-label" data-i18n="form.proxy.endpoint">代理端点</label>
                             <input type="text" class="form-control" id="proxyEndpoint" name="endpoint" value="/mcp" data-i18n-placeholder="placeholder.proxy.endpoint" placeholder="/mcp">
@@ -1223,17 +1292,16 @@
                                 <option value="sse" data-i18n="option.type.sse">SSE</option>
                             </select>
                         </div>
-                        <div class="mb-3">
-                            <label for="proxyExposedTools" class="form-label"><span data-i18n="form.proxy.tools">暴露的工具</span> <i class="fas fa-question-circle" title="每行一个工具名称，留空表示全部暴露"></i></label>
-                            <textarea class="form-control" id="proxyExposedTools" name="exposed_tools" rows="4" data-i18n-placeholder="placeholder.proxy.tools" placeholder="每行一个工具名称，留空表示全部暴露"></textarea>
-                            <div class="form-text" data-i18n="form.proxy.tools.help">每行一个工具名称，留空表示全部暴露</div>
-                        </div>
+
 
                         <div class="mb-3 form-check">
                             <input type="checkbox" class="form-check-input" id="proxyAutoStart" name="auto_start" checked>
                             <label class="form-check-label" for="proxyAutoStart" data-i18n="form.proxy.autostart">自动启动</label>
                             <div class="form-text" data-i18n="form.proxy.autostart.help">勾选后，系统启动时将自动启动此代理</div>
                         </div>
+
+                        <!-- 隐藏字段用于存储工具选择 -->
+                        <input type="hidden" id="proxyExposedTools" name="exposed_tools" value="">
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -1249,49 +1317,106 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">编辑 MCP 代理</h5>
+                    <h5 class="modal-title" data-i18n="modal.edit.proxy">编辑 MCP 代理</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="editProxyForm">
                         <input type="hidden" id="editProxyOriginalName" name="originalName">
                         <div class="mb-3">
-                            <label for="editProxyName" class="form-label"><span class="text-danger">*</span> 名称</label>
-                            <input type="text" class="form-control" id="editProxyName" name="name" required placeholder="代理名称">
+                            <label for="editProxyName" class="form-label"><span class="text-danger">*</span> <span data-i18n="form.proxy.name">名称</span></label>
+                            <input type="text" class="form-control" id="editProxyName" name="name" required data-i18n-placeholder="placeholder.proxy.name" placeholder="代理名称">
                         </div>
                         <div class="mb-3">
-                            <label for="editProxyServerName" class="form-label"><span class="text-danger">*</span> 源服务</label>
+                            <label for="editProxyServerName" class="form-label"><span class="text-danger">*</span> <span data-i18n="form.proxy.target">源服务</span></label>
                             <select class="form-select" id="editProxyServerName" name="server_name" required>
-                                <option value="">请选择源服务...</option>
+                                <option value="" data-i18n="placeholder.proxy.target">请选择源服务...</option>
                             </select>
                         </div>
+
+                        <!-- 服务描述部分 -->
+                        <div class="mb-3" id="editProxyServiceInfo" style="display: none;">
+                            <label for="editProxyDescription" class="form-label" data-i18n="form.proxy.description">服务描述</label>
+                            <input type="text" class="form-control" id="editProxyDescription" name="description" readonly>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="editDescriptionBtn" data-i18n="action.edit.description">更改描述</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="resetDescriptionBtn" data-i18n="action.reset.description">恢复默认描述</button>
+                            </div>
+                        </div>
+
+                        <!-- 工具选择部分 -->
+                        <div class="mb-3" id="editProxyToolsSelection" style="display: none;">
+                            <label class="form-label">
+                                <i class="fas fa-tools text-primary me-2"></i>
+                                <span data-i18n="form.proxy.tools.selection">可用工具选择</span>
+                                <small class="text-muted" data-i18n="tip.proxy.tools.selection">(点击工具标签来选择/取消选择)</small>
+                            </label>
+                            <div class="border rounded p-3" style="max-height: 250px; overflow-y: auto;">
+                                <div class="mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllToolsBtn">
+                                        <i class="fas fa-check-square"></i> <span data-i18n="action.select.all">全选</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllToolsBtn">
+                                        <i class="fas fa-square"></i> <span data-i18n="action.deselect.all">全不选</span>
+                                    </button>
+                                    <span class="ms-3 text-muted small">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span data-i18n="tip.proxy.tools.help">选中的工具将在代理中可用，默认全部选中</span>
+                                    </span>
+                                </div>
+                                <div id="editProxyToolsList" class="tools-selection-container">
+                                    <!-- 工具列表将动态生成为横向标签 -->
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
-                            <label for="editProxyEndpoint" class="form-label">代理端点</label>
-                            <input type="text" class="form-control" id="editProxyEndpoint" name="endpoint" placeholder="/mcp">
-                            <div class="form-text">对外暴露的端点路径，例如：/mcp</div>
+                            <label for="editProxyEndpoint" class="form-label" data-i18n="form.proxy.endpoint">代理端点</label>
+                            <input type="text" class="form-control" id="editProxyEndpoint" name="endpoint" data-i18n-placeholder="placeholder.proxy.endpoint" placeholder="/mcp">
+                            <div class="form-text" data-i18n="tip.proxy.endpoint">对外暴露的端点路径，例如：/mcp</div>
                         </div>
                         <div class="mb-3">
-                            <label for="editProxyTransportType" class="form-label">传输类型</label>
+                            <label for="editProxyTransportType" class="form-label" data-i18n="form.proxy.type">传输类型</label>
                             <select class="form-select" id="editProxyTransportType" name="transport_type">
-                                <option value="streamableHTTP">StreamableHTTP</option>
-                                <option value="sse">SSE</option>
+                                <option value="streamableHTTP" data-i18n="option.type.streamable">StreamableHTTP</option>
+                                <option value="sse" data-i18n="option.type.sse">SSE</option>
                             </select>
                         </div>
-                        <div class="mb-3">
-                            <label for="editProxyExposedTools" class="form-label">暴露的工具 <i class="fas fa-question-circle" title="每行一个工具名称，留空表示全部暴露"></i></label>
-                            <textarea class="form-control" id="editProxyExposedTools" name="exposed_tools" rows="4" placeholder="每行一个工具名称，留空表示全部暴露"></textarea>
-                        </div>
+
 
                         <div class="mb-3 form-check">
                             <input type="checkbox" class="form-check-input" id="editProxyAutoStart" name="auto_start">
-                            <label class="form-check-label" for="editProxyAutoStart">自动启动</label>
-                            <div class="form-text">勾选后，系统启动时将自动启动此代理</div>
+                            <label class="form-check-label" for="editProxyAutoStart" data-i18n="form.proxy.autostart">自动启动</label>
+                            <div class="form-text" data-i18n="form.proxy.autostart.help">勾选后，系统启动时将自动启动此代理</div>
                         </div>
+
+                        <!-- 隐藏字段用于存储工具选择 -->
+                        <input type="hidden" id="editProxyExposedTools" name="exposed_tools" value="">
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-primary" id="updateProxyBtn">更新</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-i18n="action.cancel">取消</button>
+                    <button type="button" class="btn btn-primary" id="updateProxyBtn" data-i18n="action.update">更新</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 服务测试结果模态框 -->
+    <div class="modal fade" id="testResultModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">服务测试结果</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="testResultContent">
+                        <!-- 测试结果内容将动态生成 -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
                 </div>
             </div>
         </div>
