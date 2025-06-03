@@ -5,14 +5,14 @@
 
 **A Unified Management Platform for Model Context Protocol (MCP) Services**
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/BeliefanX/MCP-Dock/releases)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/BeliefanX/MCP-Dock/releases)
 [![Python Version](https://img.shields.io/badge/python-3.12+-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-GPL%20v3-blue.svg)](LICENSE)
 [![Node.js LTS](https://img.shields.io/badge/node.js-LTS-green.svg)](https://nodejs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-00a393.svg)](https://fastapi.tiangolo.com)
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-1.9+-orange.svg)](https://github.com/modelcontextprotocol/python-sdk)
 
-*Version 0.1.0*
+*Version 0.2.0*
 
 [English](README.md) | [中文](README_CN.md)
 
