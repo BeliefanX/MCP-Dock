@@ -1,7 +1,7 @@
 [project]
 name = "mcp-dock"
-version = "1.0.0"
-description = "MCP Unified Management Tool"
+version = "0.1.0"
+description = "A Unified Management Platform for Model Context Protocol (MCP) Services"
 authors = [{name = "MCP-Dock Team"}]
 readme = "README.md"
 requires-python = ">=3.12.10"

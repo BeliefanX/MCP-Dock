@@ -54,3 +54,5 @@ mcp_dock/config/*.json
 .stfolder/
 
 .trae/
+
+docs/

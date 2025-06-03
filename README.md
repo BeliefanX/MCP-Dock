@@ -1,13 +1,18 @@
 <div align="center">
+  <img src="assets/logo.png" alt="MCP-Dock Logo" width="200" height="200">
 
 # 🚢 MCP-Dock
 
 **A Unified Management Platform for Model Context Protocol (MCP) Services**
 
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/BeliefanX/MCP-Dock/releases)
 [![Python Version](https://img.shields.io/badge/python-3.12+-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-GPL%20v3-blue.svg)](LICENSE)
+[![Node.js LTS](https://img.shields.io/badge/node.js-LTS-green.svg)](https://nodejs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-00a393.svg)](https://fastapi.tiangolo.com)
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-1.9+-orange.svg)](https://github.com/modelcontextprotocol/python-sdk)
+
+*Version 0.1.0*
 
 [English](README.md) | [中文](README_CN.md)
 
@@ -290,11 +295,14 @@ MCP-Dock supports all combinations of backend and proxy transport types:
 | **stdio** | **streamableHTTP** | ✅ | Local services with MCP Inspector |
 | **sse** | **sse** | ✅ | Remote services with SSE clients |
 | **sse** | **streamableHTTP** | ✅ | Remote services with MCP Inspector |
+| **streamableHTTP** | **sse** | ✅ | HTTP services with SSE clients |
+| **streamableHTTP** | **streamableHTTP** | ✅ | HTTP services with MCP Inspector |
 
 ### Protocol Types Explained
 
 - **Backend `stdio`**: Local MCP servers running as child processes
 - **Backend `sse`**: Remote MCP servers accessible via Server-Sent Events
+- **Backend `streamableHTTP`**: Remote MCP servers accessible via HTTP JSON-RPC
 - **Proxy `sse`**: Provides SSE streaming interface for clients
 - **Proxy `streamableHTTP`**: Provides HTTP JSON-RPC interface (MCP Inspector compatible)
 

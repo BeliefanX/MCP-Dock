@@ -1,13 +1,18 @@
 <div align="center">
+  <img src="assets/logo.png" alt="MCP-Dock Logo" width="200" height="200">
 
 # 🚢 MCP-Dock
 
 **模型上下文协议 (MCP) 服务的统一管理平台**
 
+[![版本](https://img.shields.io/badge/版本-0.1.0-blue.svg)](https://github.com/BeliefanX/MCP-Dock/releases)
 [![Python Version](https://img.shields.io/badge/python-3.12+-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-GPL%20v3-blue.svg)](LICENSE)
+[![Node.js LTS](https://img.shields.io/badge/node.js-LTS-green.svg)](https://nodejs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-00a393.svg)](https://fastapi.tiangolo.com)
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-1.9+-orange.svg)](https://github.com/modelcontextprotocol/python-sdk)
+
+*版本 0.1.0*
 
 [English](README.md) | [中文](README_CN.md)
 
@@ -292,11 +297,14 @@ MCP-Dock 支持后端和代理传输类型的所有组合：
 | **stdio** | **streamableHTTP** | ✅ | 本地服务与 MCP Inspector |
 | **sse** | **sse** | ✅ | 远程服务与 SSE 客户端 |
 | **sse** | **streamableHTTP** | ✅ | 远程服务与 MCP Inspector |
+| **streamableHTTP** | **sse** | ✅ | HTTP 服务与 SSE 客户端 |
+| **streamableHTTP** | **streamableHTTP** | ✅ | HTTP 服务与 MCP Inspector |
 
 ### 协议类型说明
 
 - **后端 `stdio`**: 作为子进程运行的本地 MCP 服务器
 - **后端 `sse`**: 通过服务器发送事件访问的远程 MCP 服务器
+- **后端 `streamableHTTP`**: 通过 HTTP JSON-RPC 访问的远程 MCP 服务器
 - **代理 `sse`**: 为客户端提供 SSE 流式接口
 - **代理 `streamableHTTP`**: 提供 HTTP JSON-RPC 接口（MCP Inspector 兼容）
 

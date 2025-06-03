@@ -79,6 +79,32 @@ This file defines the backend MCP services that MCP-Dock will manage.
 }
 ```
 
+### StreamableHTTP Service Example
+
+```json
+{
+  "servers": {
+    "HTTPService": {
+      "url": "https://api.example.com/mcp/http",
+      "transport_type": "streamableHTTP",
+      "auto_start": true,
+      "headers": {
+        "Authorization": "Bearer your-token",
+        "Content-Type": "application/json"
+      }
+    },
+    "CustomAPI": {
+      "url": "https://custom.api.com/mcp",
+      "transport_type": "streamableHTTP",
+      "auto_start": false,
+      "headers": {
+        "X-API-Key": "your-api-key"
+      }
+    }
+  }
+}
+```
+
 ### Configuration Options
 
 | Field | Type | Required | Description |
@@ -157,6 +183,8 @@ This file defines client-facing proxy endpoints that expose backend services.
 | stdio | streamableHTTP | ✅ | Local service → MCP Inspector |
 | sse | sse | ✅ | Remote service → SSE clients |
 | sse | streamableHTTP | ✅ | Remote service → MCP Inspector |
+| streamableHTTP | sse | ✅ | HTTP service → SSE clients |
+| streamableHTTP | streamableHTTP | ✅ | HTTP service → MCP Inspector |
 
 ### Configuration Examples
 
@@ -215,7 +243,43 @@ This file defines client-facing proxy endpoints that expose backend services.
 }
 ```
 
-#### 3. Mixed Environment
+#### 3. StreamableHTTP Service for Both SSE and HTTP Clients
+
+```json
+// mcp.config.json
+{
+  "servers": {
+    "http_service": {
+      "url": "https://api.example.com/mcp/http",
+      "transport_type": "streamableHTTP",
+      "auto_start": true,
+      "headers": {
+        "Authorization": "Bearer your-token"
+      }
+    }
+  }
+}
+
+// proxy_config.json
+{
+  "proxies": {
+    "HTTP_Inspector": {
+      "server_name": "http_service",
+      "endpoint": "/http",
+      "transport_type": "streamableHTTP",
+      "exposed_tools": []
+    },
+    "HTTP_SSE": {
+      "server_name": "http_service",
+      "endpoint": "/http-stream",
+      "transport_type": "sse",
+      "exposed_tools": []
+    }
+  }
+}
+```
+
+#### 4. Mixed Environment
 
 ```json
 // mcp.config.json
@@ -232,6 +296,12 @@ This file defines client-facing proxy endpoints that expose backend services.
       "url": "https://tavily.api.tadata.com/mcp/tavily/session",
       "transport_type": "sse",
       "auto_start": true
+    },
+    "custom_http": {
+      "url": "https://custom.api.com/mcp",
+      "transport_type": "streamableHTTP",
+      "auto_start": true,
+      "headers": {"X-API-Key": "your-key"}
     }
   }
 }
@@ -246,7 +316,7 @@ This file defines client-facing proxy endpoints that expose backend services.
       "exposed_tools": []
     },
     "Notion_SSE": {
-      "server_name": "notion", 
+      "server_name": "notion",
       "endpoint": "/notion-stream",
       "transport_type": "sse",
       "exposed_tools": []
@@ -256,6 +326,18 @@ This file defines client-facing proxy endpoints that expose backend services.
       "endpoint": "/tavily",
       "transport_type": "streamableHTTP",
       "exposed_tools": ["search", "news_search"]
+    },
+    "Custom_HTTP_Inspector": {
+      "server_name": "custom_http",
+      "endpoint": "/custom",
+      "transport_type": "streamableHTTP",
+      "exposed_tools": []
+    },
+    "Custom_HTTP_SSE": {
+      "server_name": "custom_http",
+      "endpoint": "/custom-stream",
+      "transport_type": "sse",
+      "exposed_tools": []
     }
   }
 }

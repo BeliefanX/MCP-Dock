@@ -1,11 +1,11 @@
 """
-MCP Unified Management Tool - Main Entry
+MCP-Dock - A Unified Management Platform for Model Context Protocol (MCP) Services
 """
 
 import argparse
-import sys
 
 from mcp_dock.utils.logging_config import setup_logging, get_logger
+from mcp_dock.__version__ import get_app_info
 from .api.gateway import start_api
 
 # Configure logging (globally unique)
@@ -15,8 +15,18 @@ logger = get_logger(__name__)
 
 def main():
     """Main entry function"""
+    app_info = get_app_info()
+
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description="MCP Unified Management Tool")
+    parser = argparse.ArgumentParser(
+        description=app_info["description"],
+        prog=app_info["name"]
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"{app_info['name']} v{app_info['version']}"
+    )
     parser.add_argument(
         "--host", default="0.0.0.0", help="API service listening address",
     )
@@ -27,7 +37,7 @@ def main():
     args = parser.parse_args()
 
     logger.info(
-        f"Starting MCP Unified Management Tool, listening at: {args.host}:{args.port}",
+        f"Starting {app_info['name']} v{app_info['version']}, listening at: {args.host}:{args.port}",
     )
 
     # Start API service
