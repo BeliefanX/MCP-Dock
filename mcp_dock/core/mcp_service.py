@@ -1640,6 +1640,64 @@ class McpServiceManager:
         """
         return [self.get_server_status(name) for name in self.servers]
 
+    def _normalize_path(self, path: str) -> str:
+        """Normalize path for cross-platform compatibility
+
+        Args:
+            path: Original path string
+
+        Returns:
+            str: Normalized path
+        """
+        if not path:
+            return path
+
+        # Convert absolute paths to relative paths when possible
+        if os.path.isabs(path):
+            # Try to find common executable names and convert to relative
+            common_executables = {
+                'npx': 'npx',
+                'node': 'node',
+                'python': 'python',
+                'python3': 'python3',
+                'uv': 'uv',
+                'pip': 'pip',
+                'pip3': 'pip3'
+            }
+
+            basename = os.path.basename(path)
+            if basename in common_executables:
+                logger.info(f"Converting absolute path {path} to relative: {basename}")
+                return basename
+
+            # For other absolute paths, log a warning but keep the original
+            logger.warning(f"Absolute path detected: {path}. This may not work across different environments.")
+
+        return path
+
+    def _get_field_with_fallback(self, config: dict, field_name: str, default=None):
+        """Get field value with fallback to camelCase naming
+
+        Args:
+            config: Configuration dictionary
+            field_name: Field name in snake_case
+            default: Default value if field not found
+
+        Returns:
+            Field value or default
+        """
+        # First try snake_case (preferred)
+        if field_name in config:
+            return config[field_name]
+
+        # Then try camelCase for backward compatibility
+        camel_case = field_name
+        if "_" in field_name:
+            parts = field_name.split("_")
+            camel_case = parts[0] + "".join(word.capitalize() for word in parts[1:])
+
+        return config.get(camel_case, default)
+
     def import_config_from_json(self, config_json: dict) -> tuple[int, int]:
         """Import configuration from JSON
 
@@ -1655,28 +1713,45 @@ class McpServiceManager:
         if "mcpServers" in config_json:
             for name, server_config in config_json["mcpServers"].items():
                 try:
+                    # Get command and normalize path
+                    command = self._get_field_with_fallback(server_config, "command", "")
+                    if command:
+                        command = self._normalize_path(command)
+
+                    # Get transport type with proper fallback
+                    transport_type = self._get_field_with_fallback(server_config, "transport_type", "stdio")
+
+                    # Get auto_start with proper fallback
+                    auto_start = self._get_field_with_fallback(server_config, "auto_start", False)
+
                     config = McpServerConfig(
                         name=name,
-                        command=server_config.get("command", ""),
-                        args=self._parse_args(server_config.get("args", [])),
-                        env=server_config.get("env", {}),
-                        cwd=server_config.get("cwd"),
-                        transport_type=server_config.get("transportType", "stdio"),
-                        port=server_config.get("port"),
-                        endpoint=server_config.get("endpoint"),
-                        url=server_config.get("url"),
-                        headers=server_config.get("headers", {}),
+                        command=command,
+                        args=self._parse_args(self._get_field_with_fallback(server_config, "args", [])),
+                        env=self._get_field_with_fallback(server_config, "env", {}),
+                        cwd=self._get_field_with_fallback(server_config, "cwd"),
+                        transport_type=transport_type,
+                        port=self._get_field_with_fallback(server_config, "port"),
+                        endpoint=self._get_field_with_fallback(server_config, "endpoint"),
+                        url=self._get_field_with_fallback(server_config, "url"),
+                        headers=self._get_field_with_fallback(server_config, "headers", {}),
+                        auto_start=bool(auto_start),
                     )
+
+                    logger.info(f"Importing server '{name}' with transport_type: {transport_type}")
 
                     if self.add_server(config):
                         success_count += 1
+                        logger.info(f"Successfully imported server: {name}")
                     else:
                         failure_count += 1
+                        logger.warning(f"Failed to add server: {name}")
                 except Exception as e:
                     logger.error(f"Failed to import server {name}: {e!s}")
                     failure_count += 1
 
         self.save_config()
+        logger.info(f"Import completed: {success_count} successful, {failure_count} failed")
         return success_count, failure_count
 
     def _check_environment_variables(self, server_name, env_dict):

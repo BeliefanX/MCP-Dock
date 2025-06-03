@@ -964,7 +964,22 @@ $(document).ready(function() {
             contentType: false,
             success: function(response) {
                 importConfigModal.hide();
-                showToast('success', `导入完成: ${response.success_count} 个成功, ${response.failure_count} 个失败`);
+
+                // 构建详细的成功消息
+                let message = response.message || '导入完成';
+
+                // 如果有路径标准化，添加提示
+                if (response.path_normalized && response.path_normalized.length > 0) {
+                    message += `\n\n路径已自动标准化的服务: ${response.path_normalized.join(', ')}`;
+                    message += '\n这些服务的绝对路径已转换为相对路径，提高跨平台兼容性。';
+                }
+
+                // 如果有导入的服务列表，显示详情
+                if (response.imported_servers && response.imported_servers.length > 0) {
+                    message += `\n\n新导入的服务: ${response.imported_servers.join(', ')}`;
+                }
+
+                showToast('success', message);
                 loadServersList();
             },
             error: function(xhr) {

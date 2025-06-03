@@ -763,18 +763,53 @@ async def import_config(file: UploadFile = File(...)) -> JSONResponse:
     try:
         content = await file.read()
         config = json.loads(content)
+
+        # 获取导入前的服务列表
+        before_import = set(manager.servers.keys())
+
         success_count, failure_count = manager.import_config_from_json(config)
+
+        # 获取导入后的服务列表，找出新增的服务
+        after_import = set(manager.servers.keys())
+        imported_servers = list(after_import - before_import)
+
+        # 构建详细的响应信息
+        message = f"配置导入完成"
+        if success_count > 0:
+            message += f"，成功导入 {success_count} 个服务"
+        if failure_count > 0:
+            message += f"，{failure_count} 个服务导入失败"
+
+        # 检查是否有路径标准化的情况
+        path_normalized = []
+        for server_name in imported_servers:
+            server = manager.servers.get(server_name)
+            if server and server.config.command:
+                # 检查是否是常见的可执行文件名（说明进行了路径标准化）
+                common_executables = ['npx', 'node', 'python', 'python3', 'uv', 'pip', 'pip3']
+                if server.config.command in common_executables:
+                    path_normalized.append(server_name)
 
         return JSONResponse(
             content={
-                "message": "Import completed",
+                "message": message,
                 "success_count": success_count,
                 "failure_count": failure_count,
+                "imported_servers": imported_servers,
+                "path_normalized": path_normalized,
+                "details": {
+                    "total_servers_in_config": len(config.get("mcpServers", {})),
+                    "path_normalization_applied": len(path_normalized) > 0
+                }
             },
+        )
+    except json.JSONDecodeError as e:
+        raise HTTPException(
+            status_code=400, detail=f"配置文件格式错误，请确保是有效的JSON格式: {e!s}",
         )
     except Exception as e:
         raise HTTPException(
-            status_code=400, detail=f"Failed to import config: {e!s}",
+            status_code=400, detail=f"导入配置失败: {e!s}",
         )
 
 
