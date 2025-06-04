@@ -514,6 +514,35 @@ class McpProxyManager:
         """
         return self.get_all_proxy_statuses()
 
+    def get_all_proxies(self) -> dict[str, dict[str, Any]]:
+        """Get all proxies as a dictionary
+
+        Returns:
+            dict[str, dict[str, Any]]: Dictionary of proxy name to proxy status information
+        """
+        result = {}
+        for name in self.proxies:
+            try:
+                result[name] = self.get_proxy_status(name)
+            except Exception as e:
+                logger.error(f"Error getting status for proxy {name}: {e}")
+                # Include basic info even if there's an error
+                proxy = self.proxies[name]
+                result[name] = {
+                    "name": proxy.config.name,
+                    "server_name": proxy.config.server_name,
+                    "endpoint": proxy.config.endpoint,
+                    "transport_type": proxy.config.transport_type,
+                    "status": "error",
+                    "error_message": str(e),
+                    "tools_count": 0,
+                    "tools": [],
+                    "exposed_tools": proxy.config.exposed_tools,
+                    "auto_start": proxy.config.auto_start,
+                    "description": proxy.config.description,
+                }
+        return result
+
     async def update_proxy_tools(self, name: str) -> tuple[bool, list[dict[str, Any]]]:
         """Update proxy tool list
 
