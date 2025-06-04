@@ -1,0 +1,58 @@
+[Unit]
+Description=MCP-Dock - Unified Management Platform for Model Context Protocol Services
+Documentation=https://github.com/BeliefanX/MCP-Dock
+After=network.target network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=30
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=mcp-dock
+Group=mcp-dock
+WorkingDirectory=/opt/mcp-dock
+ExecStart=/opt/mcp-dock/bin/mcp-dock-service
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStop=/bin/kill -TERM $MAINPID
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStartSec=30
+TimeoutStopSec=30
+Restart=always
+RestartSec=5
+
+# 环境变量
+Environment=MCP_DOCK_LOG_LEVEL=INFO
+Environment=MCP_DOCK_LOG_DIR=/var/log/mcp-dock
+Environment=MCP_DOCK_CONFIG_DIR=/etc/mcp-dock
+Environment=MCP_DOCK_DATA_DIR=/var/lib/mcp-dock
+Environment=PATH=/opt/mcp-dock/bin:/usr/local/bin:/usr/bin:/bin
+
+# 安全设置
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/mcp-dock /var/lib/mcp-dock /tmp
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=false
+RestrictNamespaces=true
+
+# 资源限制
+LimitNOFILE=65536
+LimitNPROC=4096
+MemoryMax=2G
+CPUQuota=200%
+
+# 日志配置
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mcp-dock
+
+[Install]
+WantedBy=multi-user.target

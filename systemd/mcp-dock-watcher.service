@@ -1,0 +1,33 @@
+[Unit]
+Description=MCP-Dock File Watcher for Auto-Restart
+Documentation=https://github.com/BeliefanX/MCP-Dock
+After=mcp-dock.service
+Wants=mcp-dock.service
+PartOf=mcp-dock.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/mcp-dock
+ExecStart=/opt/mcp-dock/scripts/file-watcher.sh /opt/mcp-dock
+ExecStop=/bin/kill -TERM $MAINPID
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStartSec=10
+TimeoutStopSec=10
+Restart=always
+RestartSec=5
+
+# 环境变量
+Environment=DEBOUNCE_TIME=5
+Environment=RESTART_DELAY=2
+Environment=EXCLUDE_PATTERNS=*.log,*.pyc,__pycache__,*.tmp,.git,node_modules,.venv
+
+# 日志配置
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mcp-dock-watcher
+
+[Install]
+WantedBy=multi-user.target

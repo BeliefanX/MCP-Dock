@@ -5,14 +5,11 @@
 
 **A Unified Management Platform for Model Context Protocol (MCP) Services**
 
-[![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)](https://github.com/BeliefanX/MCP-Dock/releases)
 [![Python Version](https://img.shields.io/badge/python-3.12+-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-GPL%20v3-blue.svg)](LICENSE)
 [![Node.js LTS](https://img.shields.io/badge/node.js-LTS-green.svg)](https://nodejs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-00a393.svg)](https://fastapi.tiangolo.com)
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-1.9+-orange.svg)](https://github.com/modelcontextprotocol/python-sdk)
-
-*Version 0.2.1*
 
 [English](README.md) | [中文](README_CN.md)
 
@@ -318,11 +315,150 @@ uv run uvicorn mcp_dock.api.gateway:app --host 0.0.0.0 --port 8000 --workers 4
 
 # With Docker (coming soon)
 docker run -p 8000:8000 -v ./config:/app/config mcp-dock:latest
+```
 
-# With systemd service
-sudo cp scripts/mcp-dock.service /etc/systemd/system/
-sudo systemctl enable mcp-dock
-sudo systemctl start mcp-dock
+### Linux System Service (systemd)
+
+MCP-Dock provides comprehensive systemd service support for production deployments on Linux systems.
+
+#### Automated Installation
+
+Use the provided installation script for automatic setup:
+
+```bash
+# Clone the repository
+git clone https://github.com/BeliefanX/MCP-Dock.git
+cd MCP-Dock
+
+# Run the installation script (requires root privileges)
+sudo ./scripts/install-service.sh
+```
+
+The installation script will:
+- Check system compatibility (Debian/Ubuntu)
+- Install required dependencies (curl, wget, git, python3, uv, etc.)
+- Create dedicated `mcp-dock` user and group
+- Set up directory structure with proper permissions
+- Install and configure systemd services
+- Enable and start the services automatically
+
+#### Manual Installation
+
+For manual setup or custom configurations:
+
+```bash
+# 1. Create system user
+sudo useradd -r -s /bin/false -d /opt/mcp-dock mcp-dock
+
+# 2. Create directories
+sudo mkdir -p /opt/mcp-dock/{app,config,logs}
+sudo chown -R mcp-dock:mcp-dock /opt/mcp-dock
+
+# 3. Copy application files
+sudo cp -r . /opt/mcp-dock/app/
+sudo chown -R mcp-dock:mcp-dock /opt/mcp-dock/app
+
+# 4. Install systemd service files
+sudo cp systemd/mcp-dock.service /etc/systemd/system/
+sudo cp systemd/mcp-dock-watcher.service /etc/systemd/system/
+
+# 5. Reload systemd and enable services
+sudo systemctl daemon-reload
+sudo systemctl enable mcp-dock mcp-dock-watcher
+sudo systemctl start mcp-dock mcp-dock-watcher
+```
+
+#### Service Management
+
+Use the provided management script for easy service control:
+
+```bash
+# Service status
+sudo ./scripts/manage-service.sh status
+
+# Start services
+sudo ./scripts/manage-service.sh start
+
+# Stop services
+sudo ./scripts/manage-service.sh stop
+
+# Restart services
+sudo ./scripts/manage-service.sh restart
+
+# Reload configuration
+sudo ./scripts/manage-service.sh reload
+
+# Enable auto-start
+sudo ./scripts/manage-service.sh enable
+
+# Disable auto-start
+sudo ./scripts/manage-service.sh disable
+
+# View logs
+sudo ./scripts/manage-service.sh logs
+
+# Uninstall services
+sudo ./scripts/manage-service.sh uninstall
+```
+
+#### Service Components
+
+**Main Service (`mcp-dock.service`)**
+- Runs the main MCP-Dock application
+- Listens on port 8000 by default
+- Automatic restart on failure
+- Resource limits and security hardening
+- Comprehensive logging
+
+**File Watcher Service (`mcp-dock-watcher.service`)**
+- Monitors configuration files for changes
+- Automatically reloads the main service when configs change
+- Watches `/opt/mcp-dock/config/` directory
+- Lightweight monitoring with minimal resource usage
+
+#### Configuration
+
+Systemd services use the following configuration:
+
+```bash
+# Service configuration directory
+/opt/mcp-dock/config/
+
+# Log files
+/opt/mcp-dock/logs/mcp-dock.log
+/opt/mcp-dock/logs/mcp-dock-watcher.log
+
+# Environment variables (can be customized in service files)
+MCP_DOCK_CONFIG_PATH=/opt/mcp-dock/config
+MCP_DOCK_LOG_LEVEL=INFO
+MCP_DOCK_HOST=0.0.0.0
+MCP_DOCK_PORT=8000
+```
+
+#### Security Features
+
+- Dedicated system user with minimal privileges
+- No shell access for service user
+- Restricted file system access
+- Memory and CPU limits
+- Automatic restart policies
+- Secure temporary directories
+
+#### Monitoring and Logs
+
+```bash
+# View service status
+sudo systemctl status mcp-dock mcp-dock-watcher
+
+# View real-time logs
+sudo journalctl -u mcp-dock -f
+sudo journalctl -u mcp-dock-watcher -f
+
+# View application logs
+sudo tail -f /opt/mcp-dock/logs/mcp-dock.log
+
+# Check service health
+curl http://localhost:8000/health
 ```
 
 ### Environment Variables
@@ -353,6 +489,7 @@ For comprehensive guides and technical documentation, visit the [docs/](docs/) d
 
 - **[Configuration Guide](docs/CONFIGURATION_GUIDE.md)** - Complete setup and configuration examples
 - **[Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Production deployment instructions
+- **[Linux Service Guide](docs/LINUX_SERVICE_GUIDE.md)** - System service deployment on Linux
 - **[MCP Inspector Guide](docs/MCP_INSPECTOR_GUIDE.md)** - Testing with MCP Inspector
 - **[Technical Documentation](docs/technical/)** - Architecture and implementation details
 

@@ -1,0 +1,149 @@
+#!/bin/bash
+# MCP-Dock System Service Wrapper
+# This script is designed to run MCP-Dock as a system service
+
+set -euo pipefail
+
+# 配置变量
+MCP_DOCK_HOME="${MCP_DOCK_HOME:-/opt/mcp-dock}"
+MCP_DOCK_LOG_DIR="${MCP_DOCK_LOG_DIR:-/var/log/mcp-dock}"
+MCP_DOCK_CONFIG_DIR="${MCP_DOCK_CONFIG_DIR:-/etc/mcp-dock}"
+MCP_DOCK_DATA_DIR="${MCP_DOCK_DATA_DIR:-/var/lib/mcp-dock}"
+MCP_DOCK_LOG_LEVEL="${MCP_DOCK_LOG_LEVEL:-INFO}"
+MCP_DOCK_HOST="${MCP_DOCK_HOST:-0.0.0.0}"
+MCP_DOCK_PORT="${MCP_DOCK_PORT:-8000}"
+
+# 日志函数
+log_info() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] INFO: $1" >&2
+}
+
+log_error() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] ERROR: $1" >&2
+}
+
+log_warn() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARN: $1" >&2
+}
+
+# 信号处理
+cleanup() {
+    log_info "Received termination signal, shutting down gracefully..."
+    if [[ -n "${MAIN_PID:-}" ]]; then
+        kill -TERM "$MAIN_PID" 2>/dev/null || true
+        wait "$MAIN_PID" 2>/dev/null || true
+    fi
+    exit 0
+}
+
+# 设置信号处理器
+trap cleanup SIGTERM SIGINT SIGQUIT
+
+# 检查必要的目录和文件
+check_prerequisites() {
+    log_info "Checking prerequisites..."
+    
+    # 检查并创建必要的目录
+    for dir in "$MCP_DOCK_LOG_DIR" "$MCP_DOCK_CONFIG_DIR" "$MCP_DOCK_DATA_DIR"; do
+        if [[ ! -d "$dir" ]]; then
+            log_info "Creating directory: $dir"
+            mkdir -p "$dir"
+            chown mcp-dock:mcp-dock "$dir" 2>/dev/null || true
+        fi
+    done
+    
+    # 检查 MCP-Dock 安装
+    if [[ ! -d "$MCP_DOCK_HOME" ]]; then
+        log_error "MCP-Dock installation not found at $MCP_DOCK_HOME"
+        exit 1
+    fi
+    
+    # 检查 Python 和 uv
+    if ! command -v uv >/dev/null 2>&1; then
+        log_error "uv command not found. Please install uv first."
+        exit 1
+    fi
+    
+    # 检查配置文件
+    if [[ ! -f "$MCP_DOCK_CONFIG_DIR/mcp.config.json" ]]; then
+        log_warn "Configuration file not found, copying default..."
+        if [[ -f "$MCP_DOCK_HOME/mcp_dock/config/mcp.config.json" ]]; then
+            cp "$MCP_DOCK_HOME/mcp_dock/config/mcp.config.json" "$MCP_DOCK_CONFIG_DIR/"
+            chown mcp-dock:mcp-dock "$MCP_DOCK_CONFIG_DIR/mcp.config.json" 2>/dev/null || true
+        fi
+    fi
+    
+    if [[ ! -f "$MCP_DOCK_CONFIG_DIR/proxy_config.json" ]]; then
+        log_warn "Proxy configuration file not found, copying default..."
+        if [[ -f "$MCP_DOCK_HOME/mcp_dock/config/proxy_config.json" ]]; then
+            cp "$MCP_DOCK_HOME/mcp_dock/config/proxy_config.json" "$MCP_DOCK_CONFIG_DIR/"
+            chown mcp-dock:mcp-dock "$MCP_DOCK_CONFIG_DIR/proxy_config.json" 2>/dev/null || true
+        fi
+    fi
+}
+
+# 检查端口是否可用
+check_port() {
+    if ss -tuln | grep -q ":$MCP_DOCK_PORT "; then
+        log_error "Port $MCP_DOCK_PORT is already in use"
+        exit 1
+    fi
+}
+
+# 启动 MCP-Dock
+start_mcp_dock() {
+    log_info "Starting MCP-Dock service..."
+    log_info "Host: $MCP_DOCK_HOST, Port: $MCP_DOCK_PORT"
+    log_info "Log Level: $MCP_DOCK_LOG_LEVEL"
+    log_info "Working Directory: $MCP_DOCK_HOME"
+    
+    cd "$MCP_DOCK_HOME"
+    
+    # 设置 Python 路径
+    export PYTHONPATH="$MCP_DOCK_HOME:$PYTHONPATH"
+    
+    # 启动服务
+    exec uv run python -c "
+import sys
+import os
+sys.path.insert(0, '$MCP_DOCK_HOME')
+
+# 配置服务日志
+from mcp_dock.utils.logging_config import configure_service_logging
+configure_service_logging(
+    log_dir='$MCP_DOCK_LOG_DIR',
+    log_level='$MCP_DOCK_LOG_LEVEL',
+    enable_syslog=True
+)
+
+# 启动服务
+from mcp_dock.main import main
+import argparse
+
+# 模拟命令行参数
+sys.argv = [
+    'mcp-dock',
+    '--host', '$MCP_DOCK_HOST',
+    '--port', '$MCP_DOCK_PORT'
+]
+
+main()
+"
+}
+
+# 主函数
+main() {
+    log_info "MCP-Dock service starting..."
+    
+    # 检查先决条件
+    check_prerequisites
+    
+    # 检查端口
+    check_port
+    
+    # 启动服务
+    start_mcp_dock
+}
+
+# 执行主函数
+main "$@"

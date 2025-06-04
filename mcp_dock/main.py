@@ -3,13 +3,26 @@ MCP-Dock - A Unified Management Platform for Model Context Protocol (MCP) Servic
 """
 
 import argparse
+import os
 
-from mcp_dock.utils.logging_config import setup_logging, get_logger
+from mcp_dock.utils.logging_config import setup_logging, get_logger, configure_service_logging
 from mcp_dock.__version__ import get_app_info
 from .api.gateway import start_api
 
-# Configure logging (globally unique)
-setup_logging()
+# Check if running as a service
+is_service_mode = os.getenv('MCP_DOCK_SERVICE_MODE', 'false').lower() == 'true'
+
+if is_service_mode:
+    # Configure service logging
+    configure_service_logging(
+        log_dir=os.getenv('MCP_DOCK_LOG_DIR', '/var/log/mcp-dock'),
+        log_level=os.getenv('MCP_DOCK_LOG_LEVEL', 'INFO'),
+        enable_syslog=True
+    )
+else:
+    # Configure regular logging
+    setup_logging()
+
 logger = get_logger(__name__)
 
 

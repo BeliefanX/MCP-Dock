@@ -56,3 +56,5 @@ mcp_dock/config/*.json
 .trae/
 
 docs/
+
+LINUX_SERVICE_QUICKSTART.md
