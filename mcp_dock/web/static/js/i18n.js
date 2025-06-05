@@ -66,8 +66,8 @@ class I18n {
                 'action.update': '更新',
                 'action.import': '导入',
                 'action.export': '导出',
-                'action.edit.description': '更改描述',
-                'action.reset.description': '恢复默认描述',
+                'action.edit.instructions': '更改说明',
+                'action.reset.instructions': '恢复默认说明',
                 'action.select.all': '全选',
                 'action.deselect.all': '全不选',
                 
@@ -86,7 +86,7 @@ class I18n {
                 'form.service.args.json': '参数 (JSON 数组格式)',
                 'form.service.env': '环境变量',
                 'form.service.env.json': '环境变量 (JSON 对象格式)',
-                'form.service.description': '服务描述',
+                'form.service.instructions': '用法说明',
                 'form.service.autostart': '自动启动',
                 'form.service.autostart.help': '勾选后，系统启动时将自动启动此服务',
 
@@ -96,7 +96,7 @@ class I18n {
                 
                 'form.proxy.name': '名称',
                 'form.proxy.target': '源服务',
-                'form.proxy.description': '服务描述',
+                'form.proxy.instructions': '用法说明',
                 'form.proxy.endpoint': '代理端点',
                 'form.proxy.type': '传输类型',
                 'form.proxy.tools': '暴露的工具',
@@ -236,18 +236,18 @@ class I18n {
                 'test.results.service.name': '服务名称',
                 'test.results.transport.type': '传输类型',
                 'test.results.status': '状态',
-                'test.results.description': '服务描述',
+                'test.results.instructions': '用法说明',
                 'test.results.tools': '可用工具',
                 'test.results.tools.count': '可用工具 ({count} 个)',
                 'test.results.no.tools': '暂无可用工具',
-                'test.results.no.description': '无描述',
+                'test.results.no.instructions': '无用法说明',
 
                 // 默认值
-                'default.no.description': '无描述',
+                'default.no.instructions': '无用法说明',
 
                 // 动作按钮
-                'action.edit.description': '更改描述',
-                'action.reset.description': '恢复默认描述',
+                'action.edit.instructions': '更改说明',
+                'action.reset.instructions': '恢复默认说明',
                 'action.save': '保存',
                 'test.validation.name.required': '服务名称是必填项',
                 'test.validation.type.required': '传输类型是必填项',
@@ -343,7 +343,7 @@ class I18n {
                 'form.service.cwd.optional': 'Working Directory (Optional)',
                 'form.service.url': 'URL',
                 'form.service.headers': 'Request Headers',
-                'form.service.description': 'Service Description',
+                'form.service.instructions': 'Instructions',
                 'form.service.autostart': 'Auto Start',
                 'form.service.autostart.help': 'When checked, this service will start automatically on system startup',
 
@@ -353,7 +353,7 @@ class I18n {
 
                 'form.proxy.name': 'Name',
                 'form.proxy.target': 'Source Service',
-                'form.proxy.description': 'Service Description',
+                'form.proxy.instructions': 'Instructions',
                 'form.proxy.endpoint': 'Proxy Endpoint',
                 'form.proxy.type': 'Transport Type',
                 'form.proxy.tools': 'Exposed Tools',
@@ -486,8 +486,8 @@ class I18n {
                 'button.update.tools': 'Update Tools List',
 
                 // Action text
-                'action.edit.description': 'Edit Description',
-                'action.reset.description': 'Reset Default Description',
+                'action.edit.instructions': 'Change Instructions',
+                'action.reset.instructions': 'Restore Default Instructions',
                 'action.select.all': 'Select All',
                 'action.deselect.all': 'Deselect All',
 
@@ -518,18 +518,18 @@ class I18n {
                 'test.results.service.name': 'Service Name',
                 'test.results.transport.type': 'Transport Type',
                 'test.results.status': 'Status',
-                'test.results.description': 'Service Description',
+                'test.results.instructions': 'Instructions',
                 'test.results.tools': 'Available Tools',
                 'test.results.tools.count': 'Available Tools ({count} items)',
                 'test.results.no.tools': 'No tools available',
-                'test.results.no.description': 'No description',
+                'test.results.no.instructions': 'No instructions',
 
                 // Default values
-                'default.no.description': 'No Description',
+                'default.no.instructions': 'No Instructions',
 
                 // Action buttons
-                'action.edit.description': 'Edit Description',
-                'action.reset.description': 'Reset to Default',
+                'action.edit.instructions': 'Change Instructions',
+                'action.reset.instructions': 'Restore Default Instructions',
                 'action.save': 'Save',
                 'test.validation.name.required': 'Service name is required',
                 'test.validation.type.required': 'Transport type is required',

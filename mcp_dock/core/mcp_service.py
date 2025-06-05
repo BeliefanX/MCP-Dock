@@ -53,7 +53,7 @@ class McpServerConfig:
         default_factory=dict,
     )  # Only for sse/streamableHTTP
     auto_start: bool = False  # For stdio type, whether to automatically start when the management tool starts
-    description: str = ""  # Custom description for the service
+    instructions: str = ""  # Instructions for using the service (replaces description)
 
 
 @dataclass
@@ -257,7 +257,7 @@ class McpServiceManager:
                             auto_start=bool(auto_start_value)
                             if auto_start_value is not None
                             else False,
-                            description=get_field(server_config, "description") or "",
+                            instructions=get_field(server_config, "instructions") or get_field(server_config, "description") or "",
                         )
                         self.servers[name] = McpServerInstance(config=server)
                 logger.info(f"Loaded {len(self.servers)} server configurations")
@@ -282,7 +282,7 @@ class McpServiceManager:
                 "url": cfg.url,
                 "headers": cfg.headers,
                 "auto_start": cfg.auto_start,
-                "description": cfg.description,
+                "instructions": cfg.instructions,
             }
         try:
             with open(self.config_path, "w") as f:
@@ -1695,7 +1695,7 @@ class McpServiceManager:
             "headers": server.config.headers,
             "uptime": time.time() - server.start_time if server.start_time else None,
             "auto_start": server.config.auto_start,
-            "description": server.config.description,
+            "instructions": server.config.instructions,
             "server_info": server.server_info,
         }
         if server.error_message:
@@ -1812,7 +1812,7 @@ class McpServiceManager:
                         url=self._get_field_with_fallback(server_config, "url"),
                         headers=self._get_field_with_fallback(server_config, "headers", {}),
                         auto_start=bool(auto_start),
-                        description=self._get_field_with_fallback(server_config, "description", ""),
+                        instructions=self._get_field_with_fallback(server_config, "instructions", "") or self._get_field_with_fallback(server_config, "description", ""),
                     )
 
                     logger.info(f"Importing server '{name}' with transport_type: {transport_type}")

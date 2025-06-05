@@ -58,7 +58,7 @@ class ProxyRequest(BaseModel):
     transport_type: str | None = "streamableHTTP"
     exposed_tools: list[str] | None = []
     auto_start: bool | None = False
-    description: str | None = ""
+    instructions: str | None = ""
 
 
 class ProxyUpdateRequest(BaseModel):
@@ -70,7 +70,7 @@ class ProxyUpdateRequest(BaseModel):
     transport_type: str | None = None
     exposed_tools: list[str] | None = None
     auto_start: bool | None = None
-    description: str | None = None
+    instructions: str | None = None
 
 
 class JsonRpcRequest(BaseModel):
@@ -238,7 +238,7 @@ async def create_proxy(request: ProxyRequest, managers: dict = Depends(get_manag
             transport_type=request.transport_type,
             exposed_tools=request.exposed_tools,
             auto_start=request.auto_start,
-            description=request.description or f"MCP 服务 {request.server_name}",
+            instructions=request.instructions or "",
         )
 
         # Add proxy
@@ -308,9 +308,9 @@ async def update_proxy(
             auto_start=request.auto_start
             if request.auto_start is not None
             else current_proxy.get("auto_start", False),
-            description=request.description
-            if request.description is not None
-            else current_proxy.get("description", ""),
+            instructions=request.instructions
+            if request.instructions is not None
+            else current_proxy.get("instructions", ""),
         )
 
         # Update proxy

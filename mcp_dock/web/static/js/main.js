@@ -525,72 +525,72 @@ $(document).ready(function() {
         }
     });
 
-    // 描述编辑按钮事件
-    $('#editAddDescriptionBtn').on('click', function() {
-        const $input = $('#proxyDescription');
+    // 用法说明编辑按钮事件
+    $('#editAddInstructionsBtn').on('click', function() {
+        const $input = $('#proxyInstructions');
         $input.prop('readonly', false);
         $input.focus();
         $(this).text(window.i18n.t('action.save')).removeClass('btn-outline-primary').addClass('btn-primary');
     });
 
-    $('#editDescriptionBtn').on('click', function() {
-        const $input = $('#editProxyDescription');
+    $('#editInstructionsBtn').on('click', function() {
+        const $input = $('#editProxyInstructions');
         $input.prop('readonly', false);
         $input.focus();
         $(this).text(window.i18n.t('action.save')).removeClass('btn-outline-primary').addClass('btn-primary');
     });
 
-    // 恢复默认描述按钮事件
-    $('#resetAddDescriptionBtn').on('click', function() {
+    // 恢复默认用法说明按钮事件
+    $('#resetAddInstructionsBtn').on('click', function() {
         const serverName = $('#proxyServerName').val();
         if (serverName) {
-            // 获取服务器的原始描述
+            // 获取服务器的原始用法说明
             $.ajax({
                 url: `/api/servers/${serverName}`,
                 type: 'GET',
                 success: function(server) {
-                    let originalDescription = "No Description";
+                    let originalInstructions = "No Instructions";
                     if (server.server_info && (server.server_info.instructions || server.server_info.description)) {
-                        originalDescription = server.server_info.instructions || server.server_info.description;
-                    } else if (server.description && server.description !== `MCP 服务 ${server.name}`) {
-                        originalDescription = server.description;
+                        originalInstructions = server.server_info.instructions || server.server_info.description;
+                    } else if (server.instructions && server.instructions !== `MCP 服务 ${server.name}`) {
+                        originalInstructions = server.instructions;
                     }
 
-                    $('#proxyDescription').val(originalDescription);
-                    $('#editAddDescriptionBtn').text(window.i18n.t('action.edit.description')).removeClass('btn-primary').addClass('btn-outline-primary');
-                    $('#proxyDescription').prop('readonly', true);
+                    $('#proxyInstructions').val(originalInstructions);
+                    $('#editAddInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
+                    $('#proxyInstructions').prop('readonly', true);
                 },
                 error: function() {
-                    $('#proxyDescription').val("No Description");
-                    $('#editAddDescriptionBtn').text(window.i18n.t('action.edit.description')).removeClass('btn-primary').addClass('btn-outline-primary');
-                    $('#proxyDescription').prop('readonly', true);
+                    $('#proxyInstructions').val("No Instructions");
+                    $('#editAddInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
+                    $('#proxyInstructions').prop('readonly', true);
                 }
             });
         }
     });
 
-    $('#resetDescriptionBtn').on('click', function() {
+    $('#resetInstructionsBtn').on('click', function() {
         const serverName = $('#editProxyServerName').val();
         if (serverName) {
-            // 获取服务器的原始描述
+            // 获取服务器的原始用法说明
             $.ajax({
                 url: `/api/servers/${serverName}`,
                 type: 'GET',
                 success: function(server) {
-                    let originalDescription = "No Description";
+                    let originalInstructions = "No Instructions";
                     if (server.server_info && (server.server_info.instructions || server.server_info.description)) {
-                        originalDescription = server.server_info.instructions || server.server_info.description;
+                        originalInstructions = server.server_info.instructions || server.server_info.description;
                     }
-                    // 注意：不再使用 server.description，因为它可能包含中文模板描述
+                    // 注意：不再使用 server.instructions，因为它可能包含中文模板描述
 
-                    $('#editProxyDescription').val(originalDescription);
-                    $('#editDescriptionBtn').text(window.i18n.t('action.edit.description')).removeClass('btn-primary').addClass('btn-outline-primary');
-                    $('#editProxyDescription').prop('readonly', true);
+                    $('#editProxyInstructions').val(originalInstructions);
+                    $('#editInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
+                    $('#editProxyInstructions').prop('readonly', true);
                 },
                 error: function() {
-                    $('#editProxyDescription').val("No Description");
-                    $('#editDescriptionBtn').text(window.i18n.t('action.edit.description')).removeClass('btn-primary').addClass('btn-outline-primary');
-                    $('#editProxyDescription').prop('readonly', true);
+                    $('#editProxyInstructions').val("No Instructions");
+                    $('#editInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
+                    $('#editProxyInstructions').prop('readonly', true);
                 }
             });
         }
@@ -1929,7 +1929,7 @@ $(document).on('click', '#saveProxyBtn', function() {
         transport_type: $('#proxyTransportType').val(),
         exposed_tools: exposedToolsValue ? exposedToolsValue.split('\n').filter(Boolean).map(s => s.trim()) : [],
         auto_start: $('#proxyAutoStart').prop('checked'),
-        description: $('#proxyDescription').val() || `MCP 服务 ${$('#proxyServerName').val()}`
+        instructions: $('#proxyInstructions').val() || ""
     };
     
     // 简单验证
@@ -2069,9 +2069,9 @@ $(document).on('click', '.edit-proxy-btn', function() {
                     if (proxy.server_name) {
                         loadServerInfoForProxy(proxy.server_name, 'edit', proxy.exposed_tools || []);
                     } else {
-                        // 如果没有选择服务，使用代理配置中的描述
-                        const description = proxy.description || "No Description";
-                        $('#editProxyDescription').val(description);
+                        // 如果没有选择服务，使用代理配置中的用法说明
+                        const instructions = proxy.instructions || "No Instructions";
+                        $('#editProxyInstructions').val(instructions);
                     }
                     
                     // 显示模态框
@@ -2109,7 +2109,7 @@ $(document).on('click', '#updateProxyBtn', function() {
         transport_type: $('#editProxyTransportType').val(),
         exposed_tools: editExposedToolsValue ? editExposedToolsValue.split('\n').filter(Boolean).map(s => s.trim()) : [],
         auto_start: $('#editProxyAutoStart').prop('checked'),
-        description: $('#editProxyDescription').val() || `MCP 服务 ${$('#editProxyServerName').val()}`
+        instructions: $('#editProxyInstructions').val() || ""
     };
     
     // 简单验证
@@ -2406,28 +2406,28 @@ function loadServerInfoForProxy(serverName, mode, selectedTools = []) {
         url: `/api/servers/${serverName}`,
         type: 'GET',
         success: function(server) {
-            // 获取服务器的原始描述，只使用 server_info 中的描述
-            let originalDescription = "No Description";
+            // 获取服务器的原始用法说明，只使用 server_info 中的说明
+            let originalInstructions = "No Instructions";
             if (server.server_info && (server.server_info.instructions || server.server_info.description)) {
-                originalDescription = server.server_info.instructions || server.server_info.description;
+                originalInstructions = server.server_info.instructions || server.server_info.description;
             }
-            // 注意：不再使用 server.description，因为它可能包含中文模板描述
+            // 注意：不再使用 server.instructions，因为它可能包含中文模板描述
 
             if (mode === 'add') {
-                $('#proxyDescription').val(originalDescription);
-                $('#proxyDescription').prop('readonly', true);
-                $('#editAddDescriptionBtn').text(window.i18n.t('action.edit.description')).removeClass('btn-primary').addClass('btn-outline-primary');
+                $('#proxyInstructions').val(originalInstructions);
+                $('#proxyInstructions').prop('readonly', true);
+                $('#editAddInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
             } else {
-                // 在编辑模式下，检查当前描述是否已被用户自定义
-                const currentDescription = $('#editProxyDescription').val();
-                // 如果当前描述为空、是默认模板或者是"No Description"，则使用原始描述
-                if (!currentDescription ||
-                    currentDescription.startsWith('MCP 服务') ||
-                    currentDescription === 'No Description') {
-                    $('#editProxyDescription').val(originalDescription);
+                // 在编辑模式下，检查当前用法说明是否已被用户自定义
+                const currentInstructions = $('#editProxyInstructions').val();
+                // 如果当前用法说明为空、是默认模板或者是"No Instructions"，则使用原始说明
+                if (!currentInstructions ||
+                    currentInstructions.startsWith('MCP 服务') ||
+                    currentInstructions === 'No Instructions') {
+                    $('#editProxyInstructions').val(originalInstructions);
                 }
-                $('#editProxyDescription').prop('readonly', true);
-                $('#editDescriptionBtn').text(window.i18n.t('action.edit.description')).removeClass('btn-primary').addClass('btn-outline-primary');
+                $('#editProxyInstructions').prop('readonly', true);
+                $('#editInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
             }
 
             // 显示工具列表
@@ -2718,15 +2718,15 @@ function showTestResultInModal(serverInfo, mode) {
             </div>
         </div>
 
-        <!-- 服务描述部分 -->
+        <!-- 服务用法说明部分 -->
         <div class="test-result-section">
             <div class="test-result-header">
                 <i class="fas fa-file-alt text-info"></i>
-                <h6 class="mb-0 text-info">${window.i18n.t('test.results.description')}</h6>
+                <h6 class="mb-0 text-info">${window.i18n.t('test.results.instructions')}</h6>
             </div>
-            <div class="test-result-description">
-                <div class="description-text">
-                    ${serverInfo.description || `<em class="text-muted">No Description</em>`}
+            <div class="test-result-instructions">
+                <div class="instructions-text">
+                    ${serverInfo.instructions || serverInfo.description || `<em class="text-muted">No Instructions</em>`}
                 </div>
             </div>
         </div>
