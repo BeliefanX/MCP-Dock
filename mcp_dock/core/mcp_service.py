@@ -20,6 +20,12 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 
 from mcp_dock.utils.logging_config import get_logger
+from mcp_dock.core.mcp_compliance import (
+    MCPComplianceEnforcer,
+    MCPComplianceValidator,
+    MCPErrorHandler,
+    MCPInitializationResult
+)
 
 # Configure logging
 logger = get_logger(__name__)
@@ -1093,23 +1099,47 @@ class McpServiceManager:
                         async with ClientSession(read, write) as session:
                             init_result = await session.initialize()
 
-                            # Store server info from initialization
+                            # Store complete initialization result for MCP 2025-03-26 compliance
+                            init_response = {
+                                'protocolVersion': getattr(init_result, 'protocolVersion', '2025-03-26'),
+                                'capabilities': {},
+                                'serverInfo': {},
+                                'instructions': getattr(init_result, 'instructions', None)
+                            }
+
+                            # Process capabilities with full field handling
+                            if hasattr(init_result, 'capabilities') and init_result.capabilities:
+                                caps = init_result.capabilities
+                                init_response['capabilities'] = {
+                                    'logging': getattr(caps, 'logging', None) or {},
+                                    'prompts': getattr(caps, 'prompts', None),
+                                    'resources': getattr(caps, 'resources', None),
+                                    'tools': getattr(caps, 'tools', None),
+                                    'experimental': getattr(caps, 'experimental', None)
+                                }
+
+                            # Store server info from initialization with complete field handling
                             if hasattr(init_result, 'serverInfo') and init_result.serverInfo:
                                 server_info_obj = init_result.serverInfo
                                 server.server_info = {
                                     'name': getattr(server_info_obj, 'name', ''),
                                     'version': getattr(server_info_obj, 'version', ''),
-                                    'instructions': getattr(server_info_obj, 'instructions', ''),
-                                    'description': getattr(server_info_obj, 'description', '')
+                                    'instructions': getattr(server_info_obj, 'instructions', None),
+                                    'description': getattr(server_info_obj, 'description', None)
                                 }
+                                init_response['serverInfo'] = server.server_info
                             elif hasattr(init_result, 'server_info') and init_result.server_info:
                                 server_info_obj = init_result.server_info
                                 server.server_info = {
                                     'name': getattr(server_info_obj, 'name', ''),
                                     'version': getattr(server_info_obj, 'version', ''),
-                                    'instructions': getattr(server_info_obj, 'instructions', ''),
-                                    'description': getattr(server_info_obj, 'description', '')
+                                    'instructions': getattr(server_info_obj, 'instructions', None),
+                                    'description': getattr(server_info_obj, 'description', None)
                                 }
+                                init_response['serverInfo'] = server.server_info
+
+                            # Apply MCP compliance fixes
+                            server.initialization_result = MCPComplianceEnforcer.fix_initialization_response(init_response)
 
                             tools_result = await session.list_tools()
                             # 打印原始工具对象格式以便调试
@@ -1183,7 +1213,8 @@ class McpServiceManager:
 
                     if tools:
                         parsed_tools = self._parse_tools_list(tools)
-                        server.tools = parsed_tools
+                        # Apply MCP compliance fixes to all tools
+                        server.tools = [MCPComplianceEnforcer.fix_tool_definition(tool) for tool in parsed_tools]
                         # For stdio-type services, we keep the status as "running" instead of "connected"
                         server.status = "running"
                         server.error_message = ""

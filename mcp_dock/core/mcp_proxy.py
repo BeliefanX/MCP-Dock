@@ -19,6 +19,8 @@ from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamablehttp_client
 
 from mcp_dock.utils.logging_config import get_logger
+from mcp_dock.core.mcp_compliance import MCPComplianceEnforcer, MCPErrorHandler
+from mcp_dock.core.protocol_converter import get_universal_converter
 
 logger = get_logger(__name__)
 
@@ -1130,36 +1132,16 @@ class McpProxyManager:
                 "capabilities" in result and
                 "serverInfo" in result):
 
-                # Fix capabilities.logging if it's null
-                if result["capabilities"].get("logging") is None:
-                    result["capabilities"]["logging"] = {}
+                # Apply MCP compliance fixes
+                response_dict["result"] = MCPComplianceEnforcer.fix_initialization_response(result)
 
-                # Fix instructions if it's null
-                if result["serverInfo"].get("instructions") is None:
+                # Add proxy-specific instructions if missing
+                if response_dict["result"]["serverInfo"].get("instructions") is None:
                     proxy_name = proxy.config.name
-                    result["serverInfo"]["instructions"] = (
+                    response_dict["result"]["serverInfo"]["instructions"] = (
                         f"MCP-Dock proxy server for {proxy_name}. "
                         f"This server provides access to tools from the underlying MCP service through a unified interface."
                     )
-
-                # Ensure other required fields are properly formatted
-                if "capabilities" in result:
-                    caps = result["capabilities"]
-                    # Ensure logging is an object, not null
-                    if caps.get("logging") is None:
-                        caps["logging"] = {}
-                    # Ensure tools has proper structure
-                    if "tools" in caps and caps["tools"].get("listChanged") is None:
-                        caps["tools"]["listChanged"] = True
-                    # Ensure resources has proper structure
-                    if "resources" in caps:
-                        if caps["resources"] is None:
-                            caps["resources"] = {"subscribe": False, "listChanged": False}
-                        else:
-                            if caps["resources"].get("subscribe") is None:
-                                caps["resources"]["subscribe"] = False
-                            if caps["resources"].get("listChanged") is None:
-                                caps["resources"]["listChanged"] = False
 
         # Return the formatted JSON string
         return json.dumps(response_dict)
