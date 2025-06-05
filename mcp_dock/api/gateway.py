@@ -776,15 +776,29 @@ async def test_server(name: str) -> JSONResponse:
 
         if success:
             # Get original server instructions from MCP server initialization
-            # Always prefer original server info over config instructions for test results
+            # Priority: 1) server_info instructions, 2) server_info description, 3) config instructions
             original_instructions = "No Instructions"
+
             if hasattr(server, 'server_info') and server.server_info:
-                server_instructions = server.server_info.get('instructions', '').strip()
-                server_description = server.server_info.get('description', '').strip()
-                if server_instructions:
-                    original_instructions = server_instructions
-                elif server_description:
-                    original_instructions = server_description
+                # Safely handle None values and empty strings
+                server_instructions = server.server_info.get('instructions', '') or ''
+                server_description = server.server_info.get('description', '') or ''
+
+                # Strip whitespace only if we have a string
+                if server_instructions and server_instructions.strip():
+                    original_instructions = server_instructions.strip()
+                elif server_description and server_description.strip():
+                    original_instructions = server_description.strip()
+                else:
+                    # Fallback to config instructions if server_info has no instructions/description
+                    config_instructions = server.config.instructions or ''
+                    if config_instructions.strip():
+                        original_instructions = config_instructions.strip()
+            else:
+                # Fallback to config instructions if no server_info
+                config_instructions = server.config.instructions or ''
+                if config_instructions.strip():
+                    original_instructions = config_instructions.strip()
 
             # Get server info for response
             server_info = {

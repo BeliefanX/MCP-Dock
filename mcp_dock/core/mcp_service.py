@@ -1124,8 +1124,8 @@ class McpServiceManager:
                                 server.server_info = {
                                     'name': getattr(server_info_obj, 'name', ''),
                                     'version': getattr(server_info_obj, 'version', ''),
-                                    'instructions': getattr(server_info_obj, 'instructions', None),
-                                    'description': getattr(server_info_obj, 'description', None)
+                                    'instructions': getattr(server_info_obj, 'instructions', ''),
+                                    'description': getattr(server_info_obj, 'description', '')
                                 }
                                 init_response['serverInfo'] = server.server_info
                             elif hasattr(init_result, 'server_info') and init_result.server_info:
@@ -1133,8 +1133,8 @@ class McpServiceManager:
                                 server.server_info = {
                                     'name': getattr(server_info_obj, 'name', ''),
                                     'version': getattr(server_info_obj, 'version', ''),
-                                    'instructions': getattr(server_info_obj, 'instructions', None),
-                                    'description': getattr(server_info_obj, 'description', None)
+                                    'instructions': getattr(server_info_obj, 'instructions', ''),
+                                    'description': getattr(server_info_obj, 'description', '')
                                 }
                                 init_response['serverInfo'] = server.server_info
 
