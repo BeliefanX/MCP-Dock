@@ -19,6 +19,41 @@ from mcp_dock.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+
+def clean_tool_arguments(arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Clean tool arguments to handle empty strings and null values properly.
+
+    This function addresses the issue where empty strings are passed as parameters
+    but should be treated as undefined/null for certain API requirements.
+
+    Args:
+        arguments: Original tool arguments
+
+    Returns:
+        Cleaned arguments with empty strings converted to None where appropriate
+    """
+    if not isinstance(arguments, dict):
+        return arguments
+
+    cleaned = {}
+    for key, value in arguments.items():
+        # Handle empty strings that should be treated as undefined
+        if isinstance(value, str) and value.strip() == "":
+            # For cursor-related parameters, empty strings should be None
+            if "cursor" in key.lower() or key.lower() in ["start_cursor", "end_cursor", "next_cursor"]:
+                # Don't include the parameter at all if it's empty
+                continue
+            else:
+                cleaned[key] = value
+        elif isinstance(value, dict):
+            # Recursively clean nested dictionaries
+            cleaned[key] = clean_tool_arguments(value)
+        else:
+            cleaned[key] = value
+
+    return cleaned
+
 class ProtocolConverter(ABC):
     """Abstract base class for protocol converters"""
     
@@ -56,6 +91,10 @@ class StdioToStreamableHTTPConverter(ProtocolConverter):
                     method = message.get("method")
                     params = message.get("params", {})
 
+                    # Clean tool arguments for tools/call method
+                    if method == "tools/call" and "arguments" in params:
+                        params["arguments"] = clean_tool_arguments(params["arguments"])
+
                     if method == "tools/list":
                         result = await session.list_tools()
                         # Convert to dict format for HTTP
@@ -91,7 +130,11 @@ class StdioToStreamableHTTPConverter(ProtocolConverter):
         """Convert stdio message stream to StreamableHTTP format"""
         async for message in message_stream:
             converted = await self.convert_message(message)
-            yield json.dumps(converted)
+            # Ensure proper JSON serialization without double encoding
+            if isinstance(converted, str):
+                yield converted
+            else:
+                yield json.dumps(converted)
 
 class StdioToSSEConverter(ProtocolConverter):
     """Converts stdio protocol messages to SSE format"""
@@ -116,7 +159,11 @@ class StdioToSSEConverter(ProtocolConverter):
                     
                     method = message.get("method")
                     params = message.get("params", {})
-                    
+
+                    # Clean tool arguments for tools/call method
+                    if method == "tools/call" and "arguments" in params:
+                        params["arguments"] = clean_tool_arguments(params["arguments"])
+
                     if method == "tools/list":
                         result = await session.list_tools()
                         # Convert to dict format for SSE
@@ -152,7 +199,18 @@ class StdioToSSEConverter(ProtocolConverter):
         """Convert stdio message stream to SSE format"""
         async for message in message_stream:
             converted = await self.convert_message(message)
-            yield f"data: {json.dumps(converted)}\n\n"
+            # Ensure proper JSON serialization without double encoding
+            if isinstance(converted, str):
+                # If already a JSON string, don't double-encode
+                try:
+                    # Validate it's proper JSON
+                    json.loads(converted)
+                    yield f"data: {converted}\n\n"
+                except json.JSONDecodeError:
+                    # If not valid JSON, encode it
+                    yield f"data: {json.dumps(converted)}\n\n"
+            else:
+                yield f"data: {json.dumps(converted)}\n\n"
 
 class SSEToStreamableHTTPConverter(ProtocolConverter):
     """Converts SSE protocol messages to StreamableHTTP format"""
@@ -170,7 +228,11 @@ class SSEToStreamableHTTPConverter(ProtocolConverter):
                     
                     method = message.get("method")
                     params = message.get("params", {})
-                    
+
+                    # Clean tool arguments for tools/call method
+                    if method == "tools/call" and "arguments" in params:
+                        params["arguments"] = clean_tool_arguments(params["arguments"])
+
                     if method == "tools/list":
                         result = await session.list_tools()
                         # Convert to dict format for HTTP
@@ -206,7 +268,11 @@ class SSEToStreamableHTTPConverter(ProtocolConverter):
         """Convert SSE message stream to StreamableHTTP format"""
         async for message in message_stream:
             converted = await self.convert_message(message)
-            yield json.dumps(converted)
+            # Ensure proper JSON serialization without double encoding
+            if isinstance(converted, str):
+                yield converted
+            else:
+                yield json.dumps(converted)
 
 class StreamableHTTPToSSEConverter(ProtocolConverter):
     """Converts StreamableHTTP protocol messages to SSE format"""
@@ -224,7 +290,11 @@ class StreamableHTTPToSSEConverter(ProtocolConverter):
                     
                     method = message.get("method")
                     params = message.get("params", {})
-                    
+
+                    # Clean tool arguments for tools/call method
+                    if method == "tools/call" and "arguments" in params:
+                        params["arguments"] = clean_tool_arguments(params["arguments"])
+
                     if method == "tools/list":
                         result = await session.list_tools()
                         # Convert to dict format for SSE
@@ -260,7 +330,18 @@ class StreamableHTTPToSSEConverter(ProtocolConverter):
         """Convert StreamableHTTP message stream to SSE format"""
         async for message in message_stream:
             converted = await self.convert_message(message)
-            yield f"data: {json.dumps(converted)}\n\n"
+            # Ensure proper JSON serialization without double encoding
+            if isinstance(converted, str):
+                # If already a JSON string, don't double-encode
+                try:
+                    # Validate it's proper JSON
+                    json.loads(converted)
+                    yield f"data: {converted}\n\n"
+                except json.JSONDecodeError:
+                    # If not valid JSON, encode it
+                    yield f"data: {json.dumps(converted)}\n\n"
+            else:
+                yield f"data: {json.dumps(converted)}\n\n"
 
 class UniversalProtocolConverter:
     """Universal converter that handles all protocol conversion combinations"""
@@ -311,7 +392,11 @@ class UniversalProtocolConverter:
                 yield converted_message
         else:
             error_msg = f"Unsupported protocol conversion: {source_protocol} -> {target_protocol}"
-            yield f"data: {json.dumps(MCPErrorHandler.create_error_response(None, MCPErrorHandler.MCP_TRANSPORT_ERROR, error_msg))}\n\n"
+            error_response = MCPErrorHandler.create_error_response(None, MCPErrorHandler.MCP_TRANSPORT_ERROR, error_msg)
+            if target_protocol == "sse":
+                yield f"data: {json.dumps(error_response)}\n\n"
+            else:
+                yield json.dumps(error_response)
 
 class DirectPassThroughConverter(ProtocolConverter):
     """Direct pass-through converter for same-protocol conversions"""
@@ -328,9 +413,24 @@ class DirectPassThroughConverter(ProtocolConverter):
         """Pass message stream through with appropriate formatting"""
         async for message in message_stream:
             if self.protocol == "sse":
-                yield f"data: {json.dumps(message)}\n\n"
+                # Ensure proper JSON serialization without double encoding
+                if isinstance(message, str):
+                    # If already a JSON string, don't double-encode
+                    try:
+                        # Validate it's proper JSON
+                        json.loads(message)
+                        yield f"data: {message}\n\n"
+                    except json.JSONDecodeError:
+                        # If not valid JSON, encode it
+                        yield f"data: {json.dumps(message)}\n\n"
+                else:
+                    yield f"data: {json.dumps(message)}\n\n"
             else:
-                yield json.dumps(message)
+                # Ensure proper JSON serialization without double encoding
+                if isinstance(message, str):
+                    yield message
+                else:
+                    yield json.dumps(message)
 
 # Global converter instance
 universal_converter = UniversalProtocolConverter()

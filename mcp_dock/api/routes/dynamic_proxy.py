@@ -641,6 +641,10 @@ async def handle_tool_call_request(proxy_name: str, message: dict, proxy_manager
                 }
             }
 
+        # Clean tool arguments to handle empty strings and null values properly
+        from mcp_dock.core.protocol_converter import clean_tool_arguments
+        cleaned_arguments = clean_tool_arguments(tool_arguments)
+
         # Create a tool call request
         tool_call_request = {
             "jsonrpc": "2.0",
@@ -648,7 +652,7 @@ async def handle_tool_call_request(proxy_name: str, message: dict, proxy_manager
             "method": "tools/call",
             "params": {
                 "name": tool_name,
-                "arguments": tool_arguments
+                "arguments": cleaned_arguments
             }
         }
 
