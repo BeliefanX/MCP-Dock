@@ -305,6 +305,9 @@ class McpProxyManager:
                             logger.info(f"Target service {proxy.config.server_name} has no tools yet, will retry after delay")
                             asyncio.create_task(self._delayed_proxy_tool_update(name))
 
+                        # Inherit instructions from target service if proxy has no custom instructions
+                        self._inherit_instructions_from_service(proxy, target_server)
+
                         auto_start_count += 1
                         logger.info(f"Proxy {name} auto-started successfully")
                     else:
@@ -321,6 +324,37 @@ class McpProxyManager:
                 logger.error(f"Proxy {name} auto-start exception: {e!s}")
 
         return auto_start_count
+
+    def _inherit_instructions_from_service(self, proxy: McpProxyInstance, target_server):
+        """Inherit instructions from target service if proxy has no custom instructions
+
+        Args:
+            proxy: Proxy instance
+            target_server: Target MCP service instance
+        """
+        # Only inherit if proxy has no custom instructions configured
+        if not proxy.config.instructions or proxy.config.instructions.strip() == "":
+            # Try to get instructions from target service
+            service_instructions = ""
+
+            # First priority: server_info instructions from MCP server
+            if hasattr(target_server, 'server_info') and target_server.server_info:
+                server_instructions = target_server.server_info.get('instructions', '') or ''
+                if server_instructions and server_instructions.strip():
+                    service_instructions = server_instructions.strip()
+
+            # Second priority: config instructions from service configuration
+            if not service_instructions and target_server.config.instructions:
+                config_instructions = target_server.config.instructions.strip()
+                if config_instructions:
+                    service_instructions = config_instructions
+
+            # Update proxy instructions if we found any
+            if service_instructions:
+                proxy.config.instructions = service_instructions
+                logger.info(f"Proxy {proxy.config.name} inherited instructions from service {target_server.config.name}: '{service_instructions}'")
+            else:
+                logger.debug(f"Proxy {proxy.config.name} has no instructions to inherit from service {target_server.config.name}")
 
     async def _delayed_proxy_tool_update(self, proxy_name: str, max_retries: int = 5, delay: int = 2):
         """Delayed proxy tool update for services that need time to load tools
@@ -350,6 +384,9 @@ class McpProxyManager:
             if target_server.tools:
                 proxy.tools = target_server.tools.copy() if isinstance(target_server.tools, list) else []
                 logger.info(f"Delayed tool update successful for proxy {proxy_name}: copied {len(proxy.tools)} tools from target service")
+
+                # Also inherit instructions during delayed update
+                self._inherit_instructions_from_service(proxy, target_server)
                 return
             else:
                 logger.info(f"Delayed tool update attempt {attempt + 1}/{max_retries} for proxy {proxy_name}: target service still has no tools")
@@ -376,7 +413,7 @@ class McpProxyManager:
                             ),
                             exposed_tools=proxy_config.get("exposed_tools", []),
                             auto_start=proxy_config.get("auto_start", False),
-                            instructions=proxy_config.get("instructions", "") or proxy_config.get("description", ""),
+                            instructions=proxy_config.get("instructions", ""),
                         )
                         self.proxies[name] = McpProxyInstance(config=proxy)
                 logger.info(f"Loaded {len(self.proxies)} proxy configurations")
@@ -1135,17 +1172,14 @@ class McpProxyManager:
                 # Apply MCP compliance fixes
                 response_dict["result"] = MCPComplianceEnforcer.fix_initialization_response(result)
 
-                # Add proxy-specific instructions
-                if proxy.config.instructions:
+                # Handle proxy instructions properly
+                # Only add instructions if proxy has custom instructions configured
+                # Do NOT generate default instructions if underlying service has none
+                if proxy.config.instructions and proxy.config.instructions.strip():
                     # Use custom instructions from proxy configuration
-                    response_dict["result"]["serverInfo"]["instructions"] = proxy.config.instructions
-                elif response_dict["result"]["serverInfo"].get("instructions") is None:
-                    # Fallback to default instructions if none provided
-                    proxy_name = proxy.config.name
-                    response_dict["result"]["serverInfo"]["instructions"] = (
-                        f"MCP-Dock proxy server for {proxy_name}. "
-                        f"This server provides access to tools from the underlying MCP service through a unified interface."
-                    )
+                    response_dict["result"]["serverInfo"]["instructions"] = proxy.config.instructions.strip()
+                # If proxy has no custom instructions, preserve whatever the underlying service provides
+                # (including None/empty if the service has no instructions per MCP spec)
 
         # Return the formatted JSON string
         return json.dumps(response_dict)

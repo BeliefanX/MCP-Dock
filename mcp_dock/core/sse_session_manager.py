@@ -517,6 +517,20 @@ class SSESessionManager:
     def _handle_initialize(self, session: SSESession, message: Dict[str, Any]) -> Dict[str, Any]:
         """Handle MCP initialize request"""
         session.is_initialized = True
+
+        # Get proxy instructions using the same logic as dynamic_proxy.py
+        proxy_instructions = self._get_proxy_instructions(session.proxy_name)
+
+        # Build serverInfo
+        server_info = {
+            "name": f"MCP-Dock-{session.proxy_name}",
+            "version": "1.0.0"
+        }
+
+        # Only add instructions if we have valid instructions (following MCP spec)
+        if proxy_instructions and proxy_instructions.strip():
+            server_info["instructions"] = proxy_instructions.strip()
+
         return {
             "jsonrpc": "2.0",
             "id": message.get("id"),
@@ -527,14 +541,64 @@ class SSESessionManager:
                     "resources": {"subscribe": False, "listChanged": False},
                     "logging": {}  # Required by MCP Inspector
                 },
-                "serverInfo": {
-                    "name": f"MCP-Dock-{session.proxy_name}",
-                    "version": "1.0.0",
-                    "instructions": f"MCP-Dock proxy server for {session.proxy_name}. This server provides access to tools from the underlying MCP service through a unified interface."  # Required by MCP Inspector
-                }
+                "serverInfo": server_info
             }
         }
-    
+
+    def _get_proxy_instructions(self, proxy_name: str) -> str:
+        """Get proxy instructions using the same logic as dynamic_proxy.py
+
+        Args:
+            proxy_name: Proxy name
+
+        Returns:
+            str: Proxy instructions or empty string if none found
+        """
+        try:
+            # Get proxy manager
+            from mcp_dock.core.mcp_proxy import McpProxyManager
+            proxy_manager = McpProxyManager.get_instance()
+
+            # Get proxy instance directly to access config
+            proxy_instance = proxy_manager.proxies.get(proxy_name)
+            if not proxy_instance:
+                logger.warning(f"Proxy instance {proxy_name} not found")
+                return ""
+
+            # Check if proxy has custom instructions configured
+            if proxy_instance.config.instructions and proxy_instance.config.instructions.strip():
+                logger.debug(f"Using custom instructions for proxy {proxy_name}")
+                return proxy_instance.config.instructions.strip()
+
+            # If no custom instructions, try to inherit from target service
+            server_name = proxy_instance.config.server_name
+            if not proxy_manager.mcp_manager or server_name not in proxy_manager.mcp_manager.servers:
+                logger.debug(f"Target service {server_name} not found for proxy {proxy_name}")
+                return ""
+
+            target_server = proxy_manager.mcp_manager.servers[server_name]
+
+            # First priority: server_info instructions from MCP server
+            if hasattr(target_server, 'server_info') and target_server.server_info:
+                server_instructions = target_server.server_info.get('instructions', '') or ''
+                if server_instructions and server_instructions.strip():
+                    logger.debug(f"Using server_info instructions for proxy {proxy_name}")
+                    return server_instructions.strip()
+
+            # Second priority: config instructions from service configuration
+            if target_server.config.instructions:
+                config_instructions = target_server.config.instructions.strip()
+                if config_instructions:
+                    logger.debug(f"Using config instructions for proxy {proxy_name}")
+                    return config_instructions
+
+            logger.debug(f"No instructions found for proxy {proxy_name}")
+            return ""
+
+        except Exception as e:
+            logger.error(f"Error getting instructions for proxy {proxy_name}: {e}")
+            return ""
+
     def _handle_tools_list(self, session: SSESession, message: Dict[str, Any]) -> Dict[str, Any]:
         """Handle MCP tools/list request"""
         # Get tools from proxy manager
