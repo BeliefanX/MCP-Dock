@@ -2792,41 +2792,31 @@ function getServerFormData(mode) {
 
         formData.command = command;
 
-        // 处理参数
+        // 处理参数 - 统一使用 JSON 格式处理
         if (args) {
-            if (isEdit) {
-                // 编辑模式，args是JSON格式
-                try {
-                    formData.args = JSON.parse(args);
-                } catch (e) {
-                    formData.args = [];
+            try {
+                formData.args = JSON.parse(args);
+                if (!Array.isArray(formData.args)) {
+                    throw new Error('参数必须是数组格式');
                 }
-            } else {
-                // 添加模式，args是每行一个参数
-                formData.args = args.split('\n').filter(arg => arg.trim());
+            } catch (e) {
+                console.warn('参数格式错误，使用空数组:', e.message);
+                formData.args = [];
             }
         } else {
             formData.args = [];
         }
 
-        // 处理环境变量
+        // 处理环境变量 - 统一使用 JSON 格式处理
         if (env) {
-            if (isEdit) {
-                // 编辑模式，env是JSON格式
-                try {
-                    formData.env = JSON.parse(env);
-                } catch (e) {
-                    formData.env = {};
+            try {
+                formData.env = JSON.parse(env);
+                if (typeof formData.env !== 'object' || Array.isArray(formData.env)) {
+                    throw new Error('环境变量必须是对象格式');
                 }
-            } else {
-                // 添加模式，env是每行KEY=VALUE格式
+            } catch (e) {
+                console.warn('环境变量格式错误，使用空对象:', e.message);
                 formData.env = {};
-                env.split('\n').forEach(line => {
-                    const [key, ...valueParts] = line.split('=');
-                    if (key && valueParts.length > 0) {
-                        formData.env[key.trim()] = valueParts.join('=').trim();
-                    }
-                });
             }
         } else {
             formData.env = {};
