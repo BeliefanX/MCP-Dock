@@ -1133,8 +1133,7 @@ class McpServiceManager:
                                 server.server_info = {
                                     'name': getattr(server_info_obj, 'name', ''),
                                     'version': getattr(server_info_obj, 'version', ''),
-                                    'instructions': getattr(server_info_obj, 'instructions', ''),
-                                    'description': getattr(server_info_obj, 'description', '')
+                                    'instructions': getattr(server_info_obj, 'instructions', '')
                                 }
                                 init_response['serverInfo'] = server.server_info
 
@@ -1267,8 +1266,7 @@ class McpServiceManager:
                                                 server.server_info = {
                                                     'name': getattr(init_result.serverInfo, 'name', ''),
                                                     'version': getattr(init_result.serverInfo, 'version', ''),
-                                                    'instructions': getattr(init_result.serverInfo, 'instructions', ''),
-                                                    'description': getattr(init_result.serverInfo, 'description', '')
+                                                    'instructions': getattr(init_result.serverInfo, 'instructions', '')
                                                 }
 
                                             tools_result = await session.list_tools()

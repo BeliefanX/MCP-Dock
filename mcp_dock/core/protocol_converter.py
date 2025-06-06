@@ -104,19 +104,21 @@ class StdioToStreamableHTTPConverter(ProtocolConverter):
                         else:
                             tools = []
 
-                        return {
+                        response = {
                             "jsonrpc": "2.0",
                             "id": message.get("id"),
                             "result": {"tools": tools}
                         }
+                        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
                     else:
                         # Generic method call
                         result = await session.send_request(method, params)
-                        return {
+                        response = {
                             "jsonrpc": "2.0",
                             "id": message.get("id"),
                             "result": result
                         }
+                        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
 
         except Exception as e:
             logger.error(f"Error converting stdio to StreamableHTTP: {e}")
@@ -173,19 +175,21 @@ class StdioToSSEConverter(ProtocolConverter):
                         else:
                             tools = []
                         
-                        return {
+                        response = {
                             "jsonrpc": "2.0",
                             "id": message.get("id"),
                             "result": {"tools": tools}
                         }
+                        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
                     else:
                         # Generic method call
                         result = await session.send_request(method, params)
-                        return {
+                        response = {
                             "jsonrpc": "2.0",
                             "id": message.get("id"),
                             "result": result
                         }
+                        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
                         
         except Exception as e:
             logger.error(f"Error converting stdio to SSE: {e}")
@@ -242,19 +246,21 @@ class SSEToStreamableHTTPConverter(ProtocolConverter):
                         else:
                             tools = []
                         
-                        return {
+                        response = {
                             "jsonrpc": "2.0",
                             "id": message.get("id"),
                             "result": {"tools": tools}
                         }
+                        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
                     else:
                         # Generic method call
                         result = await session.send_request(method, params)
-                        return {
+                        response = {
                             "jsonrpc": "2.0",
                             "id": message.get("id"),
                             "result": result
                         }
+                        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
                         
         except Exception as e:
             logger.error(f"Error converting SSE to StreamableHTTP: {e}")
@@ -304,19 +310,21 @@ class StreamableHTTPToSSEConverter(ProtocolConverter):
                         else:
                             tools = []
                         
-                        return {
+                        response = {
                             "jsonrpc": "2.0",
                             "id": message.get("id"),
                             "result": {"tools": tools}
                         }
+                        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
                     else:
                         # Generic method call
                         result = await session.send_request(method, params)
-                        return {
+                        response = {
                             "jsonrpc": "2.0",
                             "id": message.get("id"),
                             "result": result
                         }
+                        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
                         
         except Exception as e:
             logger.error(f"Error converting StreamableHTTP to SSE: {e}")

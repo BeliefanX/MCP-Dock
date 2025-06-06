@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from mcp_dock.core.mcp_proxy import McpProxyManager
 from mcp_dock.core.sse_session_manager import SSESessionManager
+from mcp_dock.core.mcp_compliance import MCPComplianceEnforcer
 from mcp_dock.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -726,7 +727,7 @@ async def handle_tool_call_request(proxy_name: str, message: dict, proxy_manager
 
     except Exception as e:
         logger.error(f"Error handling tools/call request: {e}")
-        return {
+        response = {
             "jsonrpc": "2.0",
             "id": message.get("id"),
             "error": {
@@ -734,6 +735,7 @@ async def handle_tool_call_request(proxy_name: str, message: dict, proxy_manager
                 "message": str(e)
             }
         }
+        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
 
 
 async def handle_sse_message(proxy_name: str, request: Request) -> JSONResponse:

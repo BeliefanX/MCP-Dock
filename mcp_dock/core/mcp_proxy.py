@@ -741,22 +741,24 @@ class McpProxyManager:
 
             # Special handling for list_tools - return proxy's filtered tools
             if method == "list_tools" or method == "tools/list":
-                return {
+                response = {
                     "jsonrpc": "2.0",
                     "id": request_id,
                     "result": {"tools": proxy.tools},
                 }
+                return MCPComplianceEnforcer.ensure_jsonrpc_response(response, request_id)
 
             # For other methods, delegate to the service manager
             result = await self.mcp_manager.call_server_method(
                 server_name, method, params
             )
 
-            return {
+            response = {
                 "jsonrpc": "2.0",
                 "id": request_id,
                 "result": result,
             }
+            return MCPComplianceEnforcer.ensure_jsonrpc_response(response, request_id)
 
         except Exception as e:
             logger.error(f"Error during proxy request: {e}")
@@ -846,19 +848,21 @@ class McpProxyManager:
                 if method == "list_tools" or method == "tools/list":
                     # Special handling for tool list requests, directly return the proxy's filtered tool list
                     result = {"tools": proxy.tools}
-                    return {
+                    response = {
                         "jsonrpc": "2.0",
                         "id": request_data.get("id"),
                         "result": result,
                     }
+                    return MCPComplianceEnforcer.ensure_jsonrpc_response(response, request_data.get("id"))
                 # Other methods are forwarded directly
                 # send_request expects method name and params directly
-                response = await session.send_request(method, params or {})
-                return {
+                result = await session.send_request(method, params or {})
+                response = {
                     "jsonrpc": "2.0",
                     "id": request_data.get("id"),
-                    "result": response,
+                    "result": result,
                 }
+                return MCPComplianceEnforcer.ensure_jsonrpc_response(response, request_data.get("id"))
             if isinstance(request_data, list):
                 # Batch request
                 results = []

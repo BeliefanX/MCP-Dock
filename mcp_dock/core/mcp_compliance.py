@@ -36,11 +36,10 @@ class MCPCapabilities:
 @dataclass
 class MCPServerInfo:
     """MCP Server Info structure according to 2025-03-26 specification"""
-    
+
     name: str
     version: str
     instructions: Optional[str] = None
-    description: Optional[str] = None
 
 @dataclass
 class MCPInitializationResult:
@@ -163,6 +162,56 @@ class MCPComplianceValidator:
         
         return True, None
 
+    @staticmethod
+    def validate_jsonrpc_response(response: Dict[str, Any]) -> tuple[bool, Optional[str]]:
+        """Validate JSON-RPC 2.0 response format
+
+        Args:
+            response: JSON-RPC response data
+
+        Returns:
+            tuple: (is_valid, error_message)
+        """
+        # Check required fields
+        if "jsonrpc" not in response:
+            return False, "Missing required field: jsonrpc"
+
+        if response["jsonrpc"] != "2.0":
+            return False, "jsonrpc field must be '2.0'"
+
+        if "id" not in response:
+            return False, "Missing required field: id"
+
+        # Must have either result or error, but not both
+        has_result = "result" in response
+        has_error = "error" in response
+
+        if not has_result and not has_error:
+            return False, "Response must contain either 'result' or 'error'"
+
+        if has_result and has_error:
+            return False, "Response cannot contain both 'result' and 'error'"
+
+        # Validate error structure if present
+        if has_error:
+            error = response["error"]
+            if not isinstance(error, dict):
+                return False, "Error field must be an object"
+
+            if "code" not in error:
+                return False, "Error object must contain 'code' field"
+
+            if "message" not in error:
+                return False, "Error object must contain 'message' field"
+
+            if not isinstance(error["code"], int):
+                return False, "Error code must be an integer"
+
+            if not isinstance(error["message"], str):
+                return False, "Error message must be a string"
+
+        return True, None
+
 class MCPComplianceEnforcer:
     """Enforces MCP compliance by fixing common issues"""
     
@@ -228,7 +277,17 @@ class MCPComplianceEnforcer:
             # Move instructions to top-level if it has a valid value
             if instructions_value and str(instructions_value).strip():
                 fixed_response["instructions"] = str(instructions_value).strip()
-        
+
+        # Remove description from serverInfo if present (deprecated in v2025-03-26)
+        if "description" in server_info:
+            server_info.pop("description")
+
+        # Ensure instructions field is only included if it has a non-empty value
+        if "instructions" in fixed_response:
+            instructions_value = fixed_response["instructions"]
+            if not instructions_value or not str(instructions_value).strip():
+                fixed_response.pop("instructions")
+
         return fixed_response
     
     @staticmethod
@@ -263,6 +322,58 @@ class MCPComplianceEnforcer:
                 input_schema["properties"] = {}
         
         return fixed_tool
+
+    @staticmethod
+    def ensure_jsonrpc_response(response: Dict[str, Any], request_id: Any = None) -> Dict[str, Any]:
+        """Ensure response conforms to JSON-RPC 2.0 specification
+
+        Args:
+            response: Original response data
+            request_id: Request ID to use if missing
+
+        Returns:
+            Fixed JSON-RPC response
+        """
+        # If already a valid JSON-RPC response, validate and return
+        if isinstance(response, dict) and "jsonrpc" in response:
+            is_valid, error_msg = MCPComplianceValidator.validate_jsonrpc_response(response)
+            if is_valid:
+                return response
+            else:
+                logger.warning(f"Invalid JSON-RPC response detected: {error_msg}")
+
+        # Fix or create proper JSON-RPC response
+        fixed_response = {
+            "jsonrpc": "2.0",
+            "id": response.get("id", request_id)
+        }
+
+        # Determine if this should be a result or error response
+        if isinstance(response, dict):
+            if "error" in response:
+                # Error response
+                error = response["error"]
+                if isinstance(error, dict) and "code" in error and "message" in error:
+                    fixed_response["error"] = error
+                else:
+                    # Fix malformed error
+                    fixed_response["error"] = {
+                        "code": -32603,  # Internal error
+                        "message": str(error) if error else "Internal error"
+                    }
+            else:
+                # Result response - use the entire response as result if no specific result field
+                if "result" in response:
+                    fixed_response["result"] = response["result"]
+                else:
+                    # Remove jsonrpc and id from response to avoid duplication
+                    result_data = {k: v for k, v in response.items() if k not in ["jsonrpc", "id"]}
+                    fixed_response["result"] = result_data if result_data else response
+        else:
+            # Non-dict response, wrap as result
+            fixed_response["result"] = response
+
+        return fixed_response
 
 class MCPErrorHandler:
     """Handles MCP-specific errors according to JSON-RPC 2.0 and MCP specifications"""
