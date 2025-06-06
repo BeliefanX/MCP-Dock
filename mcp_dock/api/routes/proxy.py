@@ -86,14 +86,206 @@ class JsonRpcRequest(BaseModel):
 
 @router.get("/debug/sessions")
 async def get_session_stats():
-    """Get SSE session statistics for debugging"""
+    """Get comprehensive SSE session statistics for debugging"""
     from mcp_dock.core.sse_session_manager import SSESessionManager
     session_manager = SSESessionManager.get_instance()
     stats = session_manager.get_session_stats()
     return stats
 
 
+@router.get("/debug/sessions/health")
+async def get_session_health():
+    """Get session health summary and recommendations"""
+    from mcp_dock.core.sse_session_manager import SSESessionManager
+    session_manager = SSESessionManager.get_instance()
+    health_summary = session_manager.get_session_health_summary()
+    return health_summary
 
+
+@router.post("/debug/sessions/cleanup")
+async def trigger_session_cleanup(
+    timeout: int = Query(300, description="Session timeout in seconds"),
+    force: bool = Query(False, description="Force cleanup of all inactive sessions")
+):
+    """Manually trigger session cleanup"""
+    from mcp_dock.core.sse_session_manager import SSESessionManager
+    session_manager = SSESessionManager.get_instance()
+
+    if force:
+        # Force cleanup with shorter timeout
+        cleanup_timeout = min(timeout, 60)  # Max 1 minute for force cleanup
+    else:
+        cleanup_timeout = timeout
+
+    cleaned_count = session_manager.smart_cleanup_sessions(cleanup_timeout)
+
+    return {
+        "message": f"Session cleanup completed",
+        "cleaned_sessions": cleaned_count,
+        "timeout_used": cleanup_timeout,
+        "force_cleanup": force,
+        "remaining_sessions": session_manager.get_session_count()
+    }
+
+
+
+
+
+@router.get("/debug/rate-limit/config")
+async def get_rate_limit_config():
+    """Get current rate limiting configuration"""
+    from mcp_dock.core.sse_session_manager import SSESessionManager
+    session_manager = SSESessionManager.get_instance()
+
+    config = session_manager.rate_limit_config
+    return {
+        "max_sessions_per_client": config.max_sessions_per_client,
+        "max_sessions_per_proxy": config.max_sessions_per_proxy,
+        "session_creation_window": config.session_creation_window,
+        "burst_allowance": config.burst_allowance,
+        "adaptive_scaling": config.adaptive_scaling,
+        "warning_threshold": config.warning_threshold
+    }
+
+
+@router.post("/debug/rate-limit/config")
+async def update_rate_limit_config(
+    max_sessions_per_client: int = None,
+    max_sessions_per_proxy: int = None,
+    session_creation_window: int = None,
+    burst_allowance: int = None,
+    adaptive_scaling: bool = None,
+    warning_threshold: float = None
+):
+    """Update rate limiting configuration"""
+    from mcp_dock.core.sse_session_manager import SSESessionManager, RateLimitConfig
+    session_manager = SSESessionManager.get_instance()
+
+    # Get current config
+    current_config = session_manager.rate_limit_config
+
+    # Create updated config with provided values or keep current ones
+    updated_config = RateLimitConfig(
+        max_sessions_per_client=max_sessions_per_client if max_sessions_per_client is not None else current_config.max_sessions_per_client,
+        max_sessions_per_proxy=max_sessions_per_proxy if max_sessions_per_proxy is not None else current_config.max_sessions_per_proxy,
+        session_creation_window=session_creation_window if session_creation_window is not None else current_config.session_creation_window,
+        burst_allowance=burst_allowance if burst_allowance is not None else current_config.burst_allowance,
+        adaptive_scaling=adaptive_scaling if adaptive_scaling is not None else current_config.adaptive_scaling,
+        warning_threshold=warning_threshold if warning_threshold is not None else current_config.warning_threshold
+    )
+
+    # Validate configuration
+    if updated_config.max_sessions_per_client <= 0:
+        raise HTTPException(status_code=400, detail="max_sessions_per_client must be positive")
+    if updated_config.max_sessions_per_proxy <= 0:
+        raise HTTPException(status_code=400, detail="max_sessions_per_proxy must be positive")
+    if updated_config.session_creation_window <= 0:
+        raise HTTPException(status_code=400, detail="session_creation_window must be positive")
+    if not 0.0 <= updated_config.warning_threshold <= 1.0:
+        raise HTTPException(status_code=400, detail="warning_threshold must be between 0.0 and 1.0")
+
+    # Update configuration
+    session_manager.rate_limit_config = updated_config
+
+    # Save to file
+    import os
+    import json
+    import time
+    current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    config_path = os.path.join(current_dir, "config", "rate_limit.config.json")
+
+    try:
+        config_data = {
+            "max_sessions_per_client": updated_config.max_sessions_per_client,
+            "max_sessions_per_proxy": updated_config.max_sessions_per_proxy,
+            "session_creation_window": updated_config.session_creation_window,
+            "burst_allowance": updated_config.burst_allowance,
+            "adaptive_scaling": updated_config.adaptive_scaling,
+            "warning_threshold": updated_config.warning_threshold,
+            "_description": "Rate limiting configuration for SSE sessions",
+            "_last_updated": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f, indent=2, ensure_ascii=False)
+
+        # Clear cache
+        session_manager._rate_limit_cache.clear()
+
+        return {
+            "message": "Rate limit configuration updated successfully",
+            "config": config_data
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save configuration: {str(e)}")
+
+
+@router.post("/debug/rate-limit/reload")
+async def reload_rate_limit_config():
+    """Reload rate limiting configuration from file"""
+    from mcp_dock.core.sse_session_manager import SSESessionManager
+    session_manager = SSESessionManager.get_instance()
+
+    success = session_manager.reload_rate_limit_config()
+    if success:
+        return {
+            "message": "Rate limit configuration reloaded successfully",
+            "config": {
+                "max_sessions_per_client": session_manager.rate_limit_config.max_sessions_per_client,
+                "max_sessions_per_proxy": session_manager.rate_limit_config.max_sessions_per_proxy,
+                "session_creation_window": session_manager.rate_limit_config.session_creation_window,
+                "burst_allowance": session_manager.rate_limit_config.burst_allowance,
+                "adaptive_scaling": session_manager.rate_limit_config.adaptive_scaling,
+                "warning_threshold": session_manager.rate_limit_config.warning_threshold
+            }
+        }
+    else:
+        raise HTTPException(status_code=500, detail="Failed to reload rate limit configuration")
+
+
+@router.get("/debug/rate-limit/status")
+async def get_rate_limit_status():
+    """Get comprehensive rate limiting status for monitoring dashboard"""
+    from mcp_dock.core.sse_session_manager import SSESessionManager
+    session_manager = SSESessionManager.get_instance()
+    status = session_manager.get_rate_limit_status()
+    return status
+
+
+@router.get("/debug/rate-limit/violations")
+async def get_rate_limit_violations():
+    """Get rate limit violation statistics and analysis"""
+    from mcp_dock.core.sse_session_manager import SSESessionManager
+    session_manager = SSESessionManager.get_instance()
+    violation_stats = session_manager.get_rate_limit_violation_stats()
+    return violation_stats
+
+
+@router.post("/debug/rate-limit/violations/clear")
+async def clear_rate_limit_violations(client_host: str = None):
+    """Clear rate limit violation history for a specific client or all clients"""
+    from mcp_dock.core.sse_session_manager import SSESessionManager
+    session_manager = SSESessionManager.get_instance()
+
+    if client_host:
+        if client_host in session_manager._rate_limit_violations:
+            del session_manager._rate_limit_violations[client_host]
+            message = f"Cleared violation history for client {client_host}"
+            cleared_count = 1
+        else:
+            message = f"No violation history found for client {client_host}"
+            cleared_count = 0
+    else:
+        cleared_count = len(session_manager._rate_limit_violations)
+        session_manager._rate_limit_violations.clear()
+        message = f"Cleared violation history for all clients ({cleared_count} clients)"
+
+    return {
+        "cleared_violations": cleared_count,
+        "client_host": client_host,
+        "message": message
+    }
 
 
 @router.post("/debug/rate-limit/clear")
