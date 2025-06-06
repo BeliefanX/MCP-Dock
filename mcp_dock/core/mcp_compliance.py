@@ -129,37 +129,125 @@ class MCPComplianceValidator:
         return True, None
     
     @staticmethod
-    def validate_tool_definition(tool: Dict[str, Any]) -> tuple[bool, Optional[str]]:
+    def validate_tool_definition(tool: Dict[str, Any], existing_tools: Optional[list] = None) -> tuple[bool, Optional[str]]:
         """Validate MCP tool definition
-        
+
         Args:
             tool: Tool definition data
-            
+            existing_tools: List of existing tools to check for duplicates
+
         Returns:
             tuple: (is_valid, error_message)
         """
         required_fields = ["name", "description", "inputSchema"]
-        
+
         for field in required_fields:
             if field not in tool:
                 return False, f"Missing required field: {field}"
-        
+
         # Validate name
         if not isinstance(tool["name"], str) or not tool["name"].strip():
             return False, "Tool name must be a non-empty string"
-        
+
+        # Validate name format (MCP specification: letters, numbers, underscores, hyphens)
+        import re
+        name_pattern = r'^[a-zA-Z0-9_-]+$'
+        if not re.match(name_pattern, tool["name"]):
+            return False, "Tool name must contain only letters, numbers, underscores, and hyphens"
+
+        # Check for duplicate tool names
+        if existing_tools:
+            existing_names = [t.get("name") for t in existing_tools if isinstance(t, dict) and "name" in t]
+            if tool["name"] in existing_names:
+                return False, f"Duplicate tool name: {tool['name']}"
+
         # Validate description
         if not isinstance(tool["description"], str):
             return False, "Tool description must be a string"
-        
-        # Validate inputSchema
-        input_schema = tool["inputSchema"]
-        if not isinstance(input_schema, dict):
-            return False, "Tool inputSchema must be an object"
-        
-        if "type" not in input_schema:
-            return False, "Tool inputSchema must contain 'type' field"
-        
+
+        # Validate inputSchema using dedicated method
+        is_valid, error_msg = MCPComplianceValidator.validate_input_schema(tool["inputSchema"])
+        if not is_valid:
+            return False, f"Invalid inputSchema: {error_msg}"
+
+        return True, None
+
+    @staticmethod
+    def validate_input_schema(schema: Dict[str, Any]) -> tuple[bool, Optional[str]]:
+        """Validate JSON Schema structure for tool input schema
+
+        Args:
+            schema: JSON Schema object to validate
+
+        Returns:
+            tuple: (is_valid, error_message)
+        """
+        if not isinstance(schema, dict):
+            return False, "Input schema must be an object"
+
+        # Check required 'type' field
+        if "type" not in schema:
+            return False, "Input schema must contain 'type' field"
+
+        schema_type = schema["type"]
+        if not isinstance(schema_type, str):
+            return False, "Schema 'type' field must be a string"
+
+        # Validate type value
+        valid_types = ["object", "array", "string", "number", "integer", "boolean", "null"]
+        if schema_type not in valid_types:
+            return False, f"Invalid schema type '{schema_type}'. Must be one of: {', '.join(valid_types)}"
+
+        # For object type, validate properties structure
+        if schema_type == "object":
+            if "properties" in schema:
+                properties = schema["properties"]
+                if not isinstance(properties, dict):
+                    return False, "Schema 'properties' field must be an object"
+
+                # Validate each property definition
+                for prop_name, prop_schema in properties.items():
+                    if not isinstance(prop_name, str):
+                        return False, f"Property name must be a string, got: {type(prop_name)}"
+
+                    if not isinstance(prop_schema, dict):
+                        return False, f"Property '{prop_name}' schema must be an object"
+
+                    # Recursively validate nested schemas
+                    is_valid, error_msg = MCPComplianceValidator.validate_input_schema(prop_schema)
+                    if not is_valid:
+                        return False, f"Invalid schema for property '{prop_name}': {error_msg}"
+
+            # Validate required field if present
+            if "required" in schema:
+                required = schema["required"]
+                if not isinstance(required, list):
+                    return False, "Schema 'required' field must be an array"
+
+                for req_field in required:
+                    if not isinstance(req_field, str):
+                        return False, f"Required field name must be a string, got: {type(req_field)}"
+
+        # For array type, validate items structure
+        elif schema_type == "array":
+            if "items" in schema:
+                items = schema["items"]
+                if isinstance(items, dict):
+                    # Single schema for all items
+                    is_valid, error_msg = MCPComplianceValidator.validate_input_schema(items)
+                    if not is_valid:
+                        return False, f"Invalid items schema: {error_msg}"
+                elif isinstance(items, list):
+                    # Array of schemas
+                    for i, item_schema in enumerate(items):
+                        if not isinstance(item_schema, dict):
+                            return False, f"Item schema at index {i} must be an object"
+                        is_valid, error_msg = MCPComplianceValidator.validate_input_schema(item_schema)
+                        if not is_valid:
+                            return False, f"Invalid items schema at index {i}: {error_msg}"
+                else:
+                    return False, "Schema 'items' field must be an object or array"
+
         return True, None
 
     @staticmethod
@@ -391,6 +479,8 @@ class MCPErrorHandler:
     MCP_CAPABILITY_ERROR = -32002
     MCP_RESOURCE_ERROR = -32003
     MCP_TOOL_ERROR = -32004
+    MCP_CONVERSION_ERROR = -32005
+    MCP_VALIDATION_ERROR = -32006
     
     @staticmethod
     def create_error_response(request_id: Any, code: int, message: str, data: Any = None) -> Dict[str, Any]:
@@ -438,8 +528,94 @@ class MCPErrorHandler:
             "capability": MCPErrorHandler.MCP_CAPABILITY_ERROR,
             "resource": MCPErrorHandler.MCP_RESOURCE_ERROR,
             "tool": MCPErrorHandler.MCP_TOOL_ERROR,
+            "conversion": MCPErrorHandler.MCP_CONVERSION_ERROR,
+            "validation": MCPErrorHandler.MCP_VALIDATION_ERROR,
         }
         
         code = error_codes.get(error_type, MCPErrorHandler.INTERNAL_ERROR)
         
         return MCPErrorHandler.create_error_response(request_id, code, message, details)
+
+    @staticmethod
+    def handle_conversion_error(error: Exception, context: str, request_id: Any = None,
+                              source_protocol: str = None, target_protocol: str = None) -> Dict[str, Any]:
+        """Handle protocol conversion errors with detailed context
+
+        Args:
+            error: The exception that occurred
+            context: Context description of where the error occurred
+            request_id: Request ID from the original request
+            source_protocol: Source protocol name
+            target_protocol: Target protocol name
+
+        Returns:
+            Standardized MCP error response
+        """
+        # Build detailed error message
+        error_msg = f"{context}: {str(error)}"
+        if source_protocol and target_protocol:
+            error_msg = f"Protocol conversion ({source_protocol} → {target_protocol}) failed - {error_msg}"
+
+        # Determine appropriate error code based on error type
+        if isinstance(error, ConnectionError):
+            error_code = MCPErrorHandler.MCP_TRANSPORT_ERROR
+        elif isinstance(error, ValueError):
+            error_code = MCPErrorHandler.MCP_VALIDATION_ERROR
+        elif isinstance(error, TimeoutError):
+            error_code = MCPErrorHandler.MCP_TRANSPORT_ERROR
+        else:
+            error_code = MCPErrorHandler.MCP_CONVERSION_ERROR
+
+        # Include additional error details
+        error_details = {
+            "error_type": type(error).__name__,
+            "context": context,
+            "original_error": str(error)
+        }
+
+        if source_protocol:
+            error_details["source_protocol"] = source_protocol
+        if target_protocol:
+            error_details["target_protocol"] = target_protocol
+
+        return MCPErrorHandler.create_error_response(
+            request_id,
+            error_code,
+            error_msg,
+            error_details
+        )
+
+    @staticmethod
+    def handle_validation_error(validation_error: str, request_id: Any = None,
+                              field_name: str = None, field_value: Any = None) -> Dict[str, Any]:
+        """Handle validation errors with detailed context
+
+        Args:
+            validation_error: Validation error message
+            request_id: Request ID from the original request
+            field_name: Name of the field that failed validation
+            field_value: Value that failed validation
+
+        Returns:
+            Standardized MCP validation error response
+        """
+        error_msg = f"Validation failed: {validation_error}"
+        if field_name:
+            error_msg = f"Validation failed for field '{field_name}': {validation_error}"
+
+        error_details = {
+            "validation_error": validation_error,
+            "error_type": "ValidationError"
+        }
+
+        if field_name:
+            error_details["field_name"] = field_name
+        if field_value is not None:
+            error_details["field_value"] = str(field_value)
+
+        return MCPErrorHandler.create_error_response(
+            request_id,
+            MCPErrorHandler.MCP_VALIDATION_ERROR,
+            error_msg,
+            error_details
+        )

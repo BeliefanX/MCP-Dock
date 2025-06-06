@@ -122,10 +122,12 @@ class StdioToStreamableHTTPConverter(ProtocolConverter):
 
         except Exception as e:
             logger.error(f"Error converting stdio to StreamableHTTP: {e}")
-            return MCPErrorHandler.create_error_response(
+            return MCPErrorHandler.handle_conversion_error(
+                e,
+                "Stdio to StreamableHTTP conversion",
                 message.get("id"),
-                MCPErrorHandler.MCP_TRANSPORT_ERROR,
-                f"Stdio to StreamableHTTP conversion failed: {str(e)}"
+                "stdio",
+                "streamableHTTP"
             )
 
     async def convert_stream(self, message_stream: AsyncIterator[Dict[str, Any]]) -> AsyncIterator[str]:
@@ -193,10 +195,12 @@ class StdioToSSEConverter(ProtocolConverter):
                         
         except Exception as e:
             logger.error(f"Error converting stdio to SSE: {e}")
-            return MCPErrorHandler.create_error_response(
-                message.get("id"), 
-                MCPErrorHandler.MCP_TRANSPORT_ERROR,
-                f"Stdio to SSE conversion failed: {str(e)}"
+            return MCPErrorHandler.handle_conversion_error(
+                e,
+                "Stdio to SSE conversion",
+                message.get("id"),
+                "stdio",
+                "sse"
             )
     
     async def convert_stream(self, message_stream: AsyncIterator[Dict[str, Any]]) -> AsyncIterator[str]:
@@ -264,10 +268,12 @@ class SSEToStreamableHTTPConverter(ProtocolConverter):
                         
         except Exception as e:
             logger.error(f"Error converting SSE to StreamableHTTP: {e}")
-            return MCPErrorHandler.create_error_response(
-                message.get("id"), 
-                MCPErrorHandler.MCP_TRANSPORT_ERROR,
-                f"SSE to StreamableHTTP conversion failed: {str(e)}"
+            return MCPErrorHandler.handle_conversion_error(
+                e,
+                "SSE to StreamableHTTP conversion",
+                message.get("id"),
+                "sse",
+                "streamableHTTP"
             )
     
     async def convert_stream(self, message_stream: AsyncIterator[Dict[str, Any]]) -> AsyncIterator[str]:
@@ -328,10 +334,12 @@ class StreamableHTTPToSSEConverter(ProtocolConverter):
                         
         except Exception as e:
             logger.error(f"Error converting StreamableHTTP to SSE: {e}")
-            return MCPErrorHandler.create_error_response(
-                message.get("id"), 
-                MCPErrorHandler.MCP_TRANSPORT_ERROR,
-                f"StreamableHTTP to SSE conversion failed: {str(e)}"
+            return MCPErrorHandler.handle_conversion_error(
+                e,
+                "StreamableHTTP to SSE conversion",
+                message.get("id"),
+                "streamableHTTP",
+                "sse"
             )
     
     async def convert_stream(self, message_stream: AsyncIterator[Dict[str, Any]]) -> AsyncIterator[str]:
@@ -351,6 +359,138 @@ class StreamableHTTPToSSEConverter(ProtocolConverter):
             else:
                 yield f"data: {json.dumps(converted)}\n\n"
 
+class SSEToStdioConverter(ProtocolConverter):
+    """Converts SSE protocol messages to stdio format"""
+
+    def __init__(self, server_config):
+        self.server_config = server_config
+
+    async def convert_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert SSE message to stdio format"""
+        try:
+            # Create SSE connection
+            async with sse_client(self.server_config.url, headers=self.server_config.headers) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+
+                    method = message.get("method")
+                    params = message.get("params", {})
+
+                    # Clean tool arguments for tools/call method
+                    if method == "tools/call" and "arguments" in params:
+                        params["arguments"] = clean_tool_arguments(params["arguments"])
+
+                    if method == "tools/list":
+                        result = await session.list_tools()
+                        # Convert to dict format for stdio
+                        if hasattr(result, 'tools'):
+                            tools = [MCPComplianceEnforcer.fix_tool_definition(tool.__dict__ if hasattr(tool, '__dict__') else tool)
+                                   for tool in result.tools]
+                        else:
+                            tools = []
+
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": message.get("id"),
+                            "result": {"tools": tools}
+                        }
+                        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                    else:
+                        # Generic method call
+                        result = await session.send_request(method, params)
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": message.get("id"),
+                            "result": result
+                        }
+                        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+
+        except Exception as e:
+            logger.error(f"Error converting SSE to stdio: {e}")
+            return MCPErrorHandler.handle_conversion_error(
+                e,
+                "SSE to stdio conversion",
+                message.get("id"),
+                "sse",
+                "stdio"
+            )
+
+    async def convert_stream(self, message_stream: AsyncIterator[Dict[str, Any]]) -> AsyncIterator[str]:
+        """Convert SSE message stream to stdio format"""
+        async for message in message_stream:
+            converted = await self.convert_message(message)
+            # Ensure proper JSON serialization without double encoding
+            if isinstance(converted, str):
+                yield converted
+            else:
+                yield json.dumps(converted)
+
+class StreamableHTTPToStdioConverter(ProtocolConverter):
+    """Converts StreamableHTTP protocol messages to stdio format"""
+
+    def __init__(self, server_config):
+        self.server_config = server_config
+
+    async def convert_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
+        """Convert StreamableHTTP message to stdio format"""
+        try:
+            # Create StreamableHTTP connection
+            async with streamablehttp_client(self.server_config.url, headers=self.server_config.headers) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+
+                    method = message.get("method")
+                    params = message.get("params", {})
+
+                    # Clean tool arguments for tools/call method
+                    if method == "tools/call" and "arguments" in params:
+                        params["arguments"] = clean_tool_arguments(params["arguments"])
+
+                    if method == "tools/list":
+                        result = await session.list_tools()
+                        # Convert to dict format for stdio
+                        if hasattr(result, 'tools'):
+                            tools = [MCPComplianceEnforcer.fix_tool_definition(tool.__dict__ if hasattr(tool, '__dict__') else tool)
+                                   for tool in result.tools]
+                        else:
+                            tools = []
+
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": message.get("id"),
+                            "result": {"tools": tools}
+                        }
+                        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                    else:
+                        # Generic method call
+                        result = await session.send_request(method, params)
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": message.get("id"),
+                            "result": result
+                        }
+                        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+
+        except Exception as e:
+            logger.error(f"Error converting StreamableHTTP to stdio: {e}")
+            return MCPErrorHandler.handle_conversion_error(
+                e,
+                "StreamableHTTP to stdio conversion",
+                message.get("id"),
+                "streamableHTTP",
+                "stdio"
+            )
+
+    async def convert_stream(self, message_stream: AsyncIterator[Dict[str, Any]]) -> AsyncIterator[str]:
+        """Convert StreamableHTTP message stream to stdio format"""
+        async for message in message_stream:
+            converted = await self.convert_message(message)
+            # Ensure proper JSON serialization without double encoding
+            if isinstance(converted, str):
+                yield converted
+            else:
+                yield json.dumps(converted)
+
 class UniversalProtocolConverter:
     """Universal converter that handles all protocol conversion combinations"""
     
@@ -367,8 +507,12 @@ class UniversalProtocolConverter:
                 self.converters[converter_key] = StdioToSSEConverter(server_config)
             elif source_protocol == "stdio" and target_protocol == "streamableHTTP":
                 self.converters[converter_key] = StdioToStreamableHTTPConverter(server_config)
+            elif source_protocol == "sse" and target_protocol == "stdio":
+                self.converters[converter_key] = SSEToStdioConverter(server_config)
             elif source_protocol == "sse" and target_protocol == "streamableHTTP":
                 self.converters[converter_key] = SSEToStreamableHTTPConverter(server_config)
+            elif source_protocol == "streamableHTTP" and target_protocol == "stdio":
+                self.converters[converter_key] = StreamableHTTPToStdioConverter(server_config)
             elif source_protocol == "streamableHTTP" and target_protocol == "sse":
                 self.converters[converter_key] = StreamableHTTPToSSEConverter(server_config)
             elif source_protocol == target_protocol:
@@ -386,10 +530,12 @@ class UniversalProtocolConverter:
         if converter:
             return await converter.convert_message(message)
         else:
-            return MCPErrorHandler.create_error_response(
+            return MCPErrorHandler.handle_conversion_error(
+                ValueError(f"Unsupported protocol conversion: {source_protocol} -> {target_protocol}"),
+                "Protocol conversion not supported",
                 message.get("id"),
-                MCPErrorHandler.MCP_TRANSPORT_ERROR,
-                f"Unsupported protocol conversion: {source_protocol} -> {target_protocol}"
+                source_protocol,
+                target_protocol
             )
     
     async def convert_stream(self, message_stream: AsyncIterator[Dict[str, Any]], source_protocol: str, target_protocol: str, server_config) -> AsyncIterator[str]:
@@ -399,8 +545,13 @@ class UniversalProtocolConverter:
             async for converted_message in converter.convert_stream(message_stream):
                 yield converted_message
         else:
-            error_msg = f"Unsupported protocol conversion: {source_protocol} -> {target_protocol}"
-            error_response = MCPErrorHandler.create_error_response(None, MCPErrorHandler.MCP_TRANSPORT_ERROR, error_msg)
+            error_response = MCPErrorHandler.handle_conversion_error(
+                ValueError(f"Unsupported protocol conversion: {source_protocol} -> {target_protocol}"),
+                "Protocol conversion not supported",
+                None,
+                source_protocol,
+                target_protocol
+            )
             if target_protocol == "sse":
                 yield f"data: {json.dumps(error_response)}\n\n"
             else:
