@@ -638,21 +638,45 @@ $(document).ready(function() {
         
         // 处理自动启动/连接选项(适用于所有服务类型)
         formData.append('auto_start', $('#autoStart').prop('checked'));
-        
+
+        // 添加空的 instructions 字段（服务级别不编辑 instructions）
+        formData.append('instructions', '');
 
         if (type === 'stdio') {
             formData.append('command', $('#command').val());
-            // 参数
-            const argsArr = $('#args').val().split('\n').map(s => s.trim()).filter(Boolean);
-            formData.append('args', JSON.stringify(argsArr));
-            // 环境变量
-            const envLines = $('#env').val().split('\n').map(s => s.trim()).filter(Boolean);
-            const envObj = {};
-            envLines.forEach(line => {
-                const idx = line.indexOf('=');
-                if (idx > 0) envObj[line.slice(0, idx)] = line.slice(idx + 1);
-            });
+
+            // 参数 - 统一使用 JSON 格式处理
+            const argsText = $('#args').val().trim();
+            let argsArray = [];
+            if (argsText) {
+                try {
+                    argsArray = JSON.parse(argsText);
+                    if (!Array.isArray(argsArray)) {
+                        throw new Error('参数必须是数组格式');
+                    }
+                } catch (e) {
+                    showToast('danger', '参数格式错误: ' + e.message);
+                    return;
+                }
+            }
+            formData.append('args', JSON.stringify(argsArray));
+
+            // 环境变量 - 统一使用 JSON 格式处理
+            const envText = $('#env').val().trim();
+            let envObj = {};
+            if (envText) {
+                try {
+                    envObj = JSON.parse(envText);
+                    if (typeof envObj !== 'object' || Array.isArray(envObj)) {
+                        throw new Error('环境变量必须是对象格式');
+                    }
+                } catch (e) {
+                    showToast('danger', '环境变量格式错误: ' + e.message);
+                    return;
+                }
+            }
             formData.append('env', JSON.stringify(envObj));
+
             formData.append('url', '');
             formData.append('headers', '');
         } else {
@@ -791,46 +815,37 @@ $(document).ready(function() {
         $btn.html('<i class="fas fa-spinner fa-spin"></i> ' + window.i18n.t('dynamic.updating'));
         
         try {
-            // 接收环境变量字段，预先检查是否是有效JSON
-            const envText = $('#editEnv').val().trim();
-            if (envText) {
+            // 验证参数字段 JSON 格式
+            const argsText = $('#editArgs').val().trim();
+            if (argsText) {
                 try {
-                    // 验证JSON格式
-                    JSON.parse(envText);
+                    const argsArray = JSON.parse(argsText);
+                    if (!Array.isArray(argsArray)) {
+                        throw new Error('参数必须是数组格式');
+                    }
                 } catch(e) {
-                    showToast('danger', '环境变量不是有效的JSON格式: ' + e.message);
+                    showToast('danger', '参数格式错误: ' + e.message);
                     $btn.prop('disabled', false);
                     $btn.html(originalHtml);
                     return;
                 }
             }
-            
-            // 接收参数字段，预先检查是否是有效JSON
-            const argsText = $('#editArgs').val().trim();
-            let argsArray = [];
-            if (argsText) {
+
+            // 验证环境变量字段 JSON 格式
+            const envText = $('#editEnv').val().trim();
+            if (envText) {
                 try {
-                    // 先尝试 JSON 解析
-                    argsArray = JSON.parse(argsText);
-                    if (!Array.isArray(argsArray)) throw new Error('参数不是数组');
-                } catch(e) {
-                    // 尝试多行或空格分割
-                    if (argsText.includes('\n')) {
-                        argsArray = argsText.split('\n').map(s => s.trim()).filter(Boolean);
-                    } else if (argsText.includes(' ')) {
-                        argsArray = argsText.split(' ').map(s => s.trim()).filter(Boolean);
-                    } else if (argsText.length > 0) {
-                        argsArray = [argsText];
-                    } else {
-                        showToast('danger', '参数不能为空');
-                        $btn.prop('disabled', false);
-                        $btn.html(originalHtml);
-                        return;
+                    const envObj = JSON.parse(envText);
+                    if (typeof envObj !== 'object' || Array.isArray(envObj)) {
+                        throw new Error('环境变量必须是对象格式');
                     }
+                } catch(e) {
+                    showToast('danger', '环境变量格式错误: ' + e.message);
+                    $btn.prop('disabled', false);
+                    $btn.html(originalHtml);
+                    return;
                 }
             }
-            // 用 JSON 字符串传给后端
-            $('#editArgs').val(JSON.stringify(argsArray));
         
             // 使用FormData收集表单数据
             const formData = new FormData($('#editServerForm')[0]);

@@ -301,7 +301,7 @@ async def get_server(name: str):
 @app.post("/api/servers", response_model=dict[str, Any])
 async def add_server(
     name: str = Form(...),
-    command: str = Form(...),
+    command: str | None = Form(None),
     args: str | None = Form(None),
     env: str | None = Form(None),
     cwd: str | None = Form(None),
@@ -313,33 +313,59 @@ async def add_server(
 ):
     """Add a new MCP server"""
     try:
+        # Validate transport type and required fields
+        transport_type = transport_type or "stdio"
+        if transport_type == "stdio":
+            if not command:
+                raise ValueError("Command is required for stdio transport type")
+        elif transport_type in ["sse", "streamableHTTP"]:
+            if not url:
+                raise ValueError(f"URL is required for {transport_type} transport type")
+        else:
+            raise ValueError(f"Unsupported transport type: {transport_type}")
+
         # Parse JSON string
         try:
             args_list = json.loads(args) if args else []
-        except:
+            # Ensure it's a list
+            if not isinstance(args_list, list):
+                raise ValueError("Arguments must be a JSON array (list), not object")
+        except json.JSONDecodeError:
             raise ValueError("Invalid JSON format for args")
+        except Exception as e:
+            raise ValueError(f"Invalid arguments format: {e}")
 
-        # Parse JSON string
+        # Parse JSON string for environment variables (should be dict, not list)
         try:
-            env_list = json.loads(env) if env else []
-        except:
-            raise ValueError("Invalid JSON format for env")
+            env_dict = json.loads(env) if env else {}
+            # Ensure it's a dictionary
+            if not isinstance(env_dict, dict):
+                raise ValueError("Environment variables must be a JSON object (dict), not array")
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON format for env: {e}")
+        except Exception as e:
+            raise ValueError(f"Invalid environment variables format: {e}")
 
-        # Parse JSON string
+        # Parse JSON string for headers
         try:
-            headers_list = json.loads(headers) if headers else []
-        except:
+            headers_dict = json.loads(headers) if headers else {}
+            # Ensure it's a dictionary
+            if not isinstance(headers_dict, dict):
+                raise ValueError("Headers must be a JSON object (dict), not array")
+        except json.JSONDecodeError:
             raise ValueError("Invalid JSON format for headers")
+        except Exception as e:
+            raise ValueError(f"Invalid headers format: {e}")
 
         config = McpServerConfig(
             name=name,
-            command=command,
+            command=command or "",
             args=args_list,
-            env=env_list,
+            env=env_dict,
             cwd=cwd,
             transport_type=transport_type,
             url=url,
-            headers=headers_list,
+            headers=headers_dict,
             auto_start=auto_start,
             instructions=instructions or "",
         )
@@ -388,14 +414,14 @@ async def add_server(
             )
             server = manager.get_server(name)
             if server:
-                success, _ = await manager.verify_mcp_server(server)
+                success, tools = await manager.verify_mcp_server(name)
                 if success:
                     logger.info(
                         f"Successfully auto-connected remote service {name} during initialization",
                     )
                     return JSONResponse(
                         content={
-                            "message": f"Server {name} added and connected successfully",
+                            "message": f"Server {name} added and connected successfully, {len(tools)} tools available",
                         },
                     )
                 logger.error(
@@ -446,13 +472,23 @@ async def update_server(
         if args:
             try:
                 processed_args = json.loads(args)
+                # Ensure it's a list
+                if not isinstance(processed_args, list):
+                    raise ValueError("Arguments must be a JSON array (list), not object")
             except json.JSONDecodeError as e:
                 raise ValueError(f"Parameter JSON parse error: {e!s}")
+            except Exception as e:
+                raise ValueError(f"Invalid arguments format: {e}")
         if env:
             try:
                 processed_env = json.loads(env)
+                # Ensure it's a dictionary
+                if not isinstance(processed_env, dict):
+                    raise ValueError("Environment variables must be a JSON object (dict), not array")
             except json.JSONDecodeError as e:
                 raise ValueError(f"Environment variable JSON parse error: {e!s}")
+            except Exception as e:
+                raise ValueError(f"Invalid environment variables format: {e}")
         if headers:
             try:
                 processed_headers = json.loads(headers)
@@ -537,14 +573,14 @@ async def update_server(
                     )
                     server = manager.get_server(updated_name)
                     if server:
-                        success, _ = await manager.verify_mcp_server(server)
+                        success, tools = await manager.verify_mcp_server(updated_name)
                         if success:
                             logger.info(
                                 f"Successfully auto-connected remote service {updated_name} after update",
                             )
                             return JSONResponse(
                                 content={
-                                    "message": f"Server {name} updated and connected successfully",
+                                    "message": f"Server {name} updated and connected successfully, {len(tools)} tools available",
                                 },
                             )
                         logger.error(

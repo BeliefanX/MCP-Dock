@@ -1057,12 +1057,14 @@
                                 <input type="text" class="form-control" id="command" name="command" data-i18n-placeholder="placeholder.service.command" placeholder="uvx or npx">
                             </div>
                             <div class="mb-3">
-                                <label for="args" class="form-label"><span data-i18n="form.service.args">参数</span> <i class="fas fa-question-circle" title="每行一个参数"></i></label>
-                                <textarea class="form-control" id="args" name="args" rows="2" data-i18n-placeholder="placeholder.service.args" placeholder="arg1\narg2"></textarea>
+                                <label for="args" class="form-label" data-i18n="form.service.args.json">参数 (JSON 数组格式)</label>
+                                <textarea class="form-control" id="args" name="args" rows="2" data-i18n-placeholder="placeholder.service.args.json" placeholder='["-y", "@modelcontextprotocol/server-filesystem"]'></textarea>
+                                <div class="form-text" data-i18n="tip.service.args.json">请输入有效的 JSON 数组格式，例如: ["-y", "@modelcontextprotocol/server-filesystem"]</div>
                             </div>
                             <div class="mb-3">
-                                <label for="env" class="form-label"><span data-i18n="form.service.env">环境变量</span> <i class="fas fa-question-circle" title="每行KEY=VALUE"></i></label>
-                                <textarea class="form-control" id="env" name="env" rows="2" data-i18n-placeholder="placeholder.service.env" placeholder="KEY1=value1\nKEY2=value2"></textarea>
+                                <label for="env" class="form-label" data-i18n="form.service.env.json">环境变量 (JSON 对象格式)</label>
+                                <textarea class="form-control" id="env" name="env" rows="2" data-i18n-placeholder="placeholder.service.env.json" placeholder='{"NODE_ENV": "production", "API_KEY": "your-key"}'></textarea>
+                                <div class="form-text" data-i18n="tip.service.env.json">请输入有效的 JSON 对象格式，例如: {"NODE_ENV": "production", "API_KEY": "your-key"}</div>
                             </div>
                         </div>
                         <!-- sse/streamableHTTP 专用字段 -->
@@ -1141,13 +1143,13 @@
                             </div>
                             <div class="mb-3">
                                 <label for="editArgs" class="form-label" data-i18n="form.service.args.json">参数 (JSON 数组格式)</label>
-                                <input type="text" class="form-control" id="editArgs" name="args" data-i18n-placeholder="placeholder.service.args.json" placeholder="例如: [&quot;--arg1&quot;, &quot;value1&quot;, &quot;--arg2&quot;]">
-                                <div class="form-text" data-i18n="tip.service.args.json">例如: ["--arg1", "value1", "--arg2"]</div>
+                                <textarea class="form-control" id="editArgs" name="args" rows="2" data-i18n-placeholder="placeholder.service.args.json" placeholder='["-y", "@modelcontextprotocol/server-filesystem"]'></textarea>
+                                <div class="form-text" data-i18n="tip.service.args.json">请输入有效的 JSON 数组格式，例如: ["-y", "@modelcontextprotocol/server-filesystem"]</div>
                             </div>
                             <div class="mb-3">
                                 <label for="editEnv" class="form-label" data-i18n="form.service.env.json">环境变量 (JSON 对象格式)</label>
-                                <input type="text" class="form-control" id="editEnv" name="env" data-i18n-placeholder="placeholder.service.env.json" placeholder="例如: {&quot;VAR1&quot;: &quot;value1&quot;, &quot;VAR2&quot;: &quot;value2&quot;}">
-                                <div class="form-text" data-i18n="tip.service.env.json">例如: {"VAR1": "value1", "VAR2": "value2"}</div>
+                                <textarea class="form-control" id="editEnv" name="env" rows="2" data-i18n-placeholder="placeholder.service.env.json" placeholder='{"NODE_ENV": "production", "API_KEY": "your-key"}'></textarea>
+                                <div class="form-text" data-i18n="tip.service.env.json">请输入有效的 JSON 对象格式，例如: {"NODE_ENV": "production", "API_KEY": "your-key"}</div>
                             </div>
                             <div class="mb-3" style="display: none;">
                                 <label for="editCwd" class="form-label" data-i18n="form.service.cwd.optional">工作目录 (可选)</label>
