@@ -1172,12 +1172,12 @@ class McpProxyManager:
                 # Apply MCP compliance fixes
                 response_dict["result"] = MCPComplianceEnforcer.fix_initialization_response(result)
 
-                # Handle proxy instructions properly
+                # Handle proxy instructions properly (per MCP v2025-03-26 spec)
                 # Only add instructions if proxy has custom instructions configured
                 # Do NOT generate default instructions if underlying service has none
                 if proxy.config.instructions and proxy.config.instructions.strip():
-                    # Use custom instructions from proxy configuration
-                    response_dict["result"]["serverInfo"]["instructions"] = proxy.config.instructions.strip()
+                    # Use custom instructions from proxy configuration as top-level field
+                    response_dict["result"]["instructions"] = proxy.config.instructions.strip()
                 # If proxy has no custom instructions, preserve whatever the underlying service provides
                 # (including None/empty if the service has no instructions per MCP spec)
 

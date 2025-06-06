@@ -617,20 +617,20 @@ $(document).ready(function() {
                         originalInstructions = server.instructions;
                     }
 
-                    // 检查是否应该隐藏 instructions 字段
+                    // Instructions 字段始终显示，设置相应的值
+                    $('#proxyServiceInfo').show();
                     if (originalInstructions === "No Instructions" || !originalInstructions.trim()) {
-                        $('#proxyServiceInfo').hide();
                         $('#proxyInstructions').val('');
                     } else {
-                        $('#proxyServiceInfo').show();
-
                         $('#proxyInstructions').val(originalInstructions);
-                        $('#editAddInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
-                        $('#proxyInstructions').prop('readonly', true);
                     }
+                    $('#editAddInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
+                    $('#proxyInstructions').prop('readonly', true);
                 },
                 error: function() {
-                    $('#proxyInstructions').val("No Instructions");
+                    // Instructions 字段始终显示，错误时设置为空
+                    $('#proxyServiceInfo').show();
+                    $('#proxyInstructions').val('');
                     $('#editAddInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
                     $('#proxyInstructions').prop('readonly', true);
                 }
@@ -652,19 +652,20 @@ $(document).ready(function() {
                     }
                     // 注意：不再使用 server.instructions，因为它可能包含中文模板描述
 
-                    // 检查是否应该隐藏 instructions 字段
+                    // Instructions 字段始终显示，设置相应的值
+                    $('#editProxyServiceInfo').show();
                     if (originalInstructions === "No Instructions" || !originalInstructions.trim()) {
-                        $('#editProxyServiceInfo').hide();
                         $('#editProxyInstructions').val('');
                     } else {
-                        $('#editProxyServiceInfo').show();
                         $('#editProxyInstructions').val(originalInstructions);
-                        $('#editInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
-                        $('#editProxyInstructions').prop('readonly', true);
                     }
+                    $('#editInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
+                    $('#editProxyInstructions').prop('readonly', true);
                 },
                 error: function() {
-                    $('#editProxyInstructions').val("No Instructions");
+                    // Instructions 字段始终显示，错误时设置为空
+                    $('#editProxyServiceInfo').show();
+                    $('#editProxyInstructions').val('');
                     $('#editInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
                     $('#editProxyInstructions').prop('readonly', true);
                 }
@@ -2558,34 +2559,34 @@ function loadServerInfoForProxy(serverName, mode, selectedTools = []) {
             }
             // 注意：不再使用 server.instructions，因为它可能包含中文模板描述
 
-            // 检查是否应该隐藏 instructions 字段
-            if (originalInstructions === "No Instructions" || !originalInstructions.trim()) {
-                if (mode === 'add') {
-                    $('#proxyServiceInfo').hide();
+            // Instructions 字段始终显示，不论内容是否为空
+            if (mode === 'add') {
+                $('#proxyServiceInfo').show();
+                // 设置 instructions 值：如果为空或"No Instructions"，则显示空字符串
+                if (originalInstructions === "No Instructions" || !originalInstructions.trim()) {
                     $('#proxyInstructions').val('');
                 } else {
-                    $('#editProxyServiceInfo').hide();
-                    $('#editProxyInstructions').val('');
-                }
-            } else {
-                if (mode === 'add') {
-                    $('#proxyServiceInfo').show();
                     $('#proxyInstructions').val(originalInstructions);
-                    $('#proxyInstructions').prop('readonly', true);
-                    $('#editAddInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
-                } else {
-                    $('#editProxyServiceInfo').show();
-                    // 在编辑模式下，检查当前用法说明是否已被用户自定义
-                    const currentInstructions = $('#editProxyInstructions').val();
-                    // 如果当前用法说明为空、是默认模板或者是"No Instructions"，则使用原始说明
-                    if (!currentInstructions ||
-                        currentInstructions.startsWith('MCP 服务') ||
-                        currentInstructions === 'No Instructions') {
+                }
+                $('#proxyInstructions').prop('readonly', true);
+                $('#editAddInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
+            } else {
+                $('#editProxyServiceInfo').show();
+                // 在编辑模式下，检查当前用法说明是否已被用户自定义
+                const currentInstructions = $('#editProxyInstructions').val();
+                // 如果当前用法说明为空、是默认模板或者是"No Instructions"，则使用原始说明
+                if (!currentInstructions ||
+                    currentInstructions.startsWith('MCP 服务') ||
+                    currentInstructions === 'No Instructions') {
+                    // 设置原始说明：如果为空或"No Instructions"，则显示空字符串
+                    if (originalInstructions === "No Instructions" || !originalInstructions.trim()) {
+                        $('#editProxyInstructions').val('');
+                    } else {
                         $('#editProxyInstructions').val(originalInstructions);
                     }
-                    $('#editProxyInstructions').prop('readonly', true);
-                    $('#editInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
                 }
+                $('#editProxyInstructions').prop('readonly', true);
+                $('#editInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
             }
 
             // 显示工具列表
@@ -2595,11 +2596,14 @@ function loadServerInfoForProxy(serverName, mode, selectedTools = []) {
             console.error('获取服务信息失败:', xhr.responseText);
             showToast('danger', window.i18n.t('error.service.info.load'));
 
+            // Instructions 字段始终显示，错误时设置为空
             if (mode === 'add') {
-                $('#proxyServiceInfo').hide();
+                $('#proxyServiceInfo').show();
+                $('#proxyInstructions').val('');
                 $('#proxyToolsSelection').hide();
             } else {
-                $('#editProxyServiceInfo').hide();
+                $('#editProxyServiceInfo').show();
+                $('#editProxyInstructions').val('');
                 $('#editProxyToolsSelection').hide();
             }
         }

@@ -615,29 +615,32 @@ async def handle_initialize_request(proxy_name: str, message: dict, proxy_manage
         # Get proxy instructions using the same logic as mcp_proxy.py
         proxy_instructions = _get_proxy_instructions(proxy_name, proxy_manager)
 
-        # Build serverInfo
+        # Build serverInfo (per MCP v2025-03-26 spec: only name and version)
         server_info = {
             "name": f"MCP-Dock-{proxy_name}",
             "version": "1.0.0"
         }
 
-        # Only add instructions if we have valid instructions (following MCP spec)
+        # Build result object
+        result = {
+            "protocolVersion": protocol_version,
+            "capabilities": {
+                "tools": {"listChanged": True},
+                "resources": {"subscribe": False, "listChanged": False},
+                "logging": {},  # Required by MCP Inspector
+                "sampling": {}  # Required by some clients like n8n
+            },
+            "serverInfo": server_info
+        }
+
+        # Add instructions as top-level field (per MCP v2025-03-26 spec)
         if proxy_instructions and proxy_instructions.strip():
-            server_info["instructions"] = proxy_instructions.strip()
+            result["instructions"] = proxy_instructions.strip()
 
         return {
             "jsonrpc": "2.0",
             "id": message.get("id"),
-            "result": {
-                "protocolVersion": protocol_version,
-                "capabilities": {
-                    "tools": {"listChanged": True},
-                    "resources": {"subscribe": False, "listChanged": False},
-                    "logging": {},  # Required by MCP Inspector
-                    "sampling": {}  # Required by some clients like n8n
-                },
-                "serverInfo": server_info
-            }
+            "result": result
         }
     except Exception as e:
         logger.error(f"Error handling initialize request: {e}")

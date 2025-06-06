@@ -521,28 +521,31 @@ class SSESessionManager:
         # Get proxy instructions using the same logic as dynamic_proxy.py
         proxy_instructions = self._get_proxy_instructions(session.proxy_name)
 
-        # Build serverInfo
+        # Build serverInfo (per MCP v2025-03-26 spec: only name and version)
         server_info = {
             "name": f"MCP-Dock-{session.proxy_name}",
             "version": "1.0.0"
         }
 
-        # Only add instructions if we have valid instructions (following MCP spec)
+        # Build result object
+        result = {
+            "protocolVersion": "2025-03-26",  # Updated to latest MCP version
+            "capabilities": {
+                "tools": {"listChanged": True},
+                "resources": {"subscribe": False, "listChanged": False},
+                "logging": {}  # Required by MCP Inspector
+            },
+            "serverInfo": server_info
+        }
+
+        # Add instructions as top-level field (per MCP v2025-03-26 spec)
         if proxy_instructions and proxy_instructions.strip():
-            server_info["instructions"] = proxy_instructions.strip()
+            result["instructions"] = proxy_instructions.strip()
 
         return {
             "jsonrpc": "2.0",
             "id": message.get("id"),
-            "result": {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {
-                    "tools": {"listChanged": True},
-                    "resources": {"subscribe": False, "listChanged": False},
-                    "logging": {}  # Required by MCP Inspector
-                },
-                "serverInfo": server_info
-            }
+            "result": result
         }
 
     def _get_proxy_instructions(self, proxy_name: str) -> str:

@@ -221,10 +221,13 @@ class MCPComplianceEnforcer:
         if "version" not in server_info:
             server_info["version"] = "1.0.0"
         
-        # Handle instructions field properly (can be null)
-        if server_info.get("instructions") is None:
-            # Don't set a default value - null is valid for instructions
-            pass
+        # Remove instructions from serverInfo if present (MCP v2025-03-26 compliance)
+        # Instructions should be a top-level field, not in serverInfo
+        if "instructions" in server_info:
+            instructions_value = server_info.pop("instructions")
+            # Move instructions to top-level if it has a valid value
+            if instructions_value and str(instructions_value).strip():
+                fixed_response["instructions"] = str(instructions_value).strip()
         
         return fixed_response
     
