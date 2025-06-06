@@ -17,6 +17,22 @@
     <!-- 引入 Font Awesome 图标 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
+    <!-- 页面状态预设脚本 - 防止闪烁 -->
+    <script>
+        // 在 DOM 加载前就设置正确的初始状态，防止闪烁
+        (function() {
+            try {
+                const savedTab = localStorage.getItem('mcp_dock_active_tab');
+                if (savedTab) {
+                    // 设置一个标记，告诉后续脚本不要执行默认初始化
+                    window.mcpDockPresetTab = savedTab;
+                }
+            } catch (e) {
+                // 忽略 localStorage 错误
+            }
+        })();
+    </script>
+
     <!-- 自定义样式 -->
     <style>
         /* 优化的深蓝色系配色方案 */
@@ -892,7 +908,7 @@
             <div class="sidebar-nav">
                 <ul class="nav nav-pills flex-column">
                     <li class="nav-item">
-                        <a class="nav-link active" href="#" data-bs-toggle="tab" data-bs-target="#serversTab" id="serversNavLink">
+                        <a class="nav-link" href="#" data-bs-toggle="tab" data-bs-target="#serversTab" id="serversNavLink">
                             <i class="fas fa-server"></i>
                             <span class="nav-text" data-i18n="nav.services">MCP 服务管理</span>
                         </a>
@@ -904,6 +920,22 @@
                         </a>
                     </li>
                 </ul>
+
+                <!-- 设置初始状态的脚本 -->
+                <script>
+                    // 根据预设的 tab 状态设置初始的 active 类
+                    (function() {
+                        const presetTab = window.mcpDockPresetTab;
+                        if (presetTab === '#proxiesTab') {
+                            document.getElementById('serversNavLink').classList.remove('active');
+                            document.getElementById('proxiesNavLink').classList.add('active');
+                        } else {
+                            // 默认状态：服务页面激活
+                            document.getElementById('serversNavLink').classList.add('active');
+                            document.getElementById('proxiesNavLink').classList.remove('active');
+                        }
+                    })();
+                </script>
             </div>
 
             <!-- 移动端菜单切换按钮 -->
@@ -916,7 +948,7 @@
         <main id="mainContent" class="main-content">
         <div class="tab-content">
             <!-- MCP 服务标签页 -->
-            <div class="tab-pane fade show active" id="serversTab">
+            <div class="tab-pane fade" id="serversTab">
                 <!-- 操作按钮区域 -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="mb-0 text-primary">
@@ -1422,6 +1454,22 @@
             </div>
         </div>
     </div>
+
+        <!-- 设置 tab 内容初始状态的脚本 -->
+        <script>
+            // 根据预设的 tab 状态设置初始的 tab 内容状态
+            (function() {
+                const presetTab = window.mcpDockPresetTab;
+                if (presetTab === '#proxiesTab') {
+                    document.getElementById('serversTab').classList.remove('show', 'active');
+                    document.getElementById('proxiesTab').classList.add('show', 'active');
+                } else {
+                    // 默认状态：服务页面激活
+                    document.getElementById('serversTab').classList.add('show', 'active');
+                    document.getElementById('proxiesTab').classList.remove('show', 'active');
+                }
+            })();
+        </script>
         </main>
     </div>
 

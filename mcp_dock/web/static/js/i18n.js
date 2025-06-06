@@ -201,6 +201,7 @@ class I18n {
                 'status.stopped': '已停止',
                 'status.error': '错误',
                 'status.verified': '已验证',
+                'status.enabled': '已启用',
                 'status.connected': '已连接',
                 'status.unknown': '未知',
 
@@ -213,6 +214,7 @@ class I18n {
                 'button.disconnect': '断开',
                 'button.get.tools': '获取列表',
                 'button.view.tools': '查看 {count} 个工具',
+                'button.view.tools.detailed': '查看 {enabled}/{total} 个工具',
                 'button.update.tools': '更新工具列表',
 
                 // 自动启动状态
@@ -489,6 +491,7 @@ class I18n {
                 'button.disconnect': 'Disconnect',
                 'button.get.tools': 'Get List',
                 'button.view.tools': 'View {count} tools',
+                'button.view.tools.detailed': 'View {enabled}/{total} tools',
                 'button.update.tools': 'Update Tools List',
 
                 // Action text

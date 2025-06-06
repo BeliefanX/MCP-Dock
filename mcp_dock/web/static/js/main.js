@@ -160,6 +160,9 @@ const SidebarManager = {
             const $link = $(e.currentTarget);
             const target = $link.data('bs-target');
 
+            // 保存当前活动的 tab 状态
+            TabStateManager.saveActiveTab(target);
+
             // 更新导航状态
             $('#sidebar .nav-link').removeClass('active');
             $link.addClass('active');
@@ -212,6 +215,59 @@ function showToast(type, message) {
 // 全局变量，存储服务器基础URL
 let baseServerUrl = window.location.origin;
 let customBaseUrl = null; // 用户自定义的BASE URL
+
+// 全局缓存，存储服务器的完整工具列表
+window.serverToolsCache = window.serverToolsCache || {};
+
+// Tab 状态管理
+const TabStateManager = {
+    // 本地存储键名
+    STORAGE_KEY: 'mcp_dock_active_tab',
+
+    // 保存当前活动的 tab
+    saveActiveTab: function(tabId) {
+        try {
+            localStorage.setItem(this.STORAGE_KEY, tabId);
+        } catch (e) {
+            console.warn('保存 tab 状态失败:', e);
+        }
+    },
+
+    // 获取保存的活动 tab
+    getActiveTab: function() {
+        try {
+            return localStorage.getItem(this.STORAGE_KEY);
+        } catch (e) {
+            console.warn('获取 tab 状态失败:', e);
+            return null;
+        }
+    },
+
+    // 恢复 tab 状态
+    restoreTabState: function() {
+        const savedTab = this.getActiveTab();
+        if (savedTab) {
+            // 查找对应的导航链接
+            const $navLink = $(`#sidebar .nav-link[data-bs-target="${savedTab}"]`);
+            if ($navLink.length > 0) {
+                // 如果有预设状态，说明初始状态已经正确设置，只需要加载数据
+                if (window.mcpDockPresetTab === savedTab) {
+                    // 直接加载对应的数据，不触发点击事件
+                    if (savedTab === '#serversTab') {
+                        loadServersList();
+                    } else if (savedTab === '#proxiesTab') {
+                        loadProxiesList();
+                    }
+                } else {
+                    // 没有预设状态或预设状态不匹配，触发点击事件
+                    $navLink.trigger('click');
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+};
 
 // BASE URL 配置管理
 const BaseUrlManager = {
@@ -348,6 +404,15 @@ $(document).ready(function() {
     BaseUrlManager.loadFromStorage();
     BaseUrlManager.updateUI();
 
+    // 恢复 tab 状态
+    if (!TabStateManager.restoreTabState()) {
+        // 如果没有保存的状态或恢复失败，默认显示服务器页面
+        // 但是不触发点击事件，因为初始状态已经在 HTML 中设置好了
+        if (!window.mcpDockPresetTab) {
+            $('#sidebar .nav-link[data-bs-target="#serversTab"]').trigger('click');
+        }
+    }
+
     // BASE URL配置事件处理
     $('#saveBaseUrlBtn').click(function() {
         const inputUrl = $('#baseUrlInput').val().trim();
@@ -403,11 +468,7 @@ $(document).ready(function() {
         return;
     }
 
-    // 加载服务器列表
-    loadServersList();
-
-    // 加载代理列表
-    loadProxiesList();
+    // 注意：服务器列表和代理列表现在由 tab 状态管理器根据活动页面来加载
     
     // 注意：标签切换事件现在由 SidebarManager 处理
     
@@ -556,9 +617,17 @@ $(document).ready(function() {
                         originalInstructions = server.instructions;
                     }
 
-                    $('#proxyInstructions').val(originalInstructions);
-                    $('#editAddInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
-                    $('#proxyInstructions').prop('readonly', true);
+                    // 检查是否应该隐藏 instructions 字段
+                    if (originalInstructions === "No Instructions" || !originalInstructions.trim()) {
+                        $('#proxyServiceInfo').hide();
+                        $('#proxyInstructions').val('');
+                    } else {
+                        $('#proxyServiceInfo').show();
+
+                        $('#proxyInstructions').val(originalInstructions);
+                        $('#editAddInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
+                        $('#proxyInstructions').prop('readonly', true);
+                    }
                 },
                 error: function() {
                     $('#proxyInstructions').val("No Instructions");
@@ -583,9 +652,16 @@ $(document).ready(function() {
                     }
                     // 注意：不再使用 server.instructions，因为它可能包含中文模板描述
 
-                    $('#editProxyInstructions').val(originalInstructions);
-                    $('#editInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
-                    $('#editProxyInstructions').prop('readonly', true);
+                    // 检查是否应该隐藏 instructions 字段
+                    if (originalInstructions === "No Instructions" || !originalInstructions.trim()) {
+                        $('#editProxyServiceInfo').hide();
+                        $('#editProxyInstructions').val('');
+                    } else {
+                        $('#editProxyServiceInfo').show();
+                        $('#editProxyInstructions').val(originalInstructions);
+                        $('#editInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
+                        $('#editProxyInstructions').prop('readonly', true);
+                    }
                 },
                 error: function() {
                     $('#editProxyInstructions').val("No Instructions");
@@ -1653,7 +1729,7 @@ function loadServersList() {
 function loadProxiesList() {
     // 检查DOM元素是否存在
     const $proxiesList = $('#proxiesList');
-    
+
     // 清空代理列表并显示加载状态
     if ($proxiesList.length > 0) {
         $proxiesList.html(`
@@ -1669,7 +1745,37 @@ function loadProxiesList() {
             </tr>
         `);
     }
-    
+
+    // 首先获取所有服务器信息以缓存工具列表
+    $.ajax({
+        url: '/api/servers',
+        type: 'GET',
+        cache: false,
+        dataType: 'json',
+        success: function(servers) {
+            // 缓存服务器工具信息
+            if (servers && Array.isArray(servers)) {
+                servers.forEach(function(server) {
+                    if (server.tools && Array.isArray(server.tools)) {
+                        window.serverToolsCache[server.name] = server.tools;
+                    }
+                });
+            }
+
+            // 然后加载代理列表
+            loadProxiesListWithCache();
+        },
+        error: function() {
+            // 即使获取服务器信息失败，也继续加载代理列表
+            loadProxiesListWithCache();
+        }
+    });
+}
+
+// 使用缓存的服务器信息加载代理列表
+function loadProxiesListWithCache() {
+    const $proxiesList = $('#proxiesList');
+
     // 请求代理列表数据
     $.ajax({
         url: '/api/proxy/',
@@ -1756,10 +1862,29 @@ function loadProxiesList() {
                 let toolsHtml = '';
                 if (proxy.tools && proxy.tools.length > 0) {
                     const modalId = `proxyToolsModal_${proxy.name.replace(/[^a-zA-Z0-9]/g, '')}`;
-                    
+
+                    // 计算启用和总工具数
+                    // 从缓存的源服务信息中获取完整工具列表
+                    const serverTools = window.serverToolsCache && window.serverToolsCache[proxy.server_name]
+                        ? window.serverToolsCache[proxy.server_name]
+                        : proxy.tools; // 回退到当前工具列表
+
+                    const totalTools = serverTools.length;
+
+                    let enabledTools;
+                    if (!proxy.exposed_tools || proxy.exposed_tools.length === 0) {
+                        // 没有设置过滤，所有工具都启用
+                        enabledTools = totalTools;
+                    } else {
+                        // 设置了过滤，计算有多少工具在 exposed_tools 列表中
+                        enabledTools = serverTools.filter(tool =>
+                            proxy.exposed_tools.includes(tool.name)
+                        ).length;
+                    }
+
                     toolsHtml += `
                         <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#${modalId}">
-                            <i class="fas fa-tools"></i> ${window.i18n.t('button.view.tools', {count: proxy.tools.length})}
+                            <i class="fas fa-tools"></i> ${window.i18n.t('button.view.tools.detailed', {enabled: enabledTools, total: totalTools})}
                         </button>
                         
                         <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true">
@@ -1780,9 +1905,14 @@ function loadProxiesList() {
                                                 </thead>
                                                 <tbody>`;
                     
-                    proxy.tools.forEach(function(tool) {
+                    // 显示所有工具（从缓存的完整工具列表）
+                    serverTools.forEach(function(tool) {
                         // 检查工具是否在代理的暴露工具列表中
-                        const isExposed = !proxy.exposed_tools || proxy.exposed_tools.length === 0 || proxy.exposed_tools.includes(tool.name);
+                        // 如果没有设置 exposed_tools 或为空数组，则所有工具都启用
+                        // 如果设置了 exposed_tools，则只有在列表中的工具才启用
+                        const isExposed = (!proxy.exposed_tools || proxy.exposed_tools.length === 0)
+                            ? true
+                            : proxy.exposed_tools.includes(tool.name);
                         const statusBadge = isExposed
                             ? `<span class="badge bg-success ms-2">${window.i18n.t('status.enabled')}</span>`
                             : `<span class="badge bg-secondary ms-2">${window.i18n.t('status.disabled')}</span>`;
@@ -2428,21 +2558,34 @@ function loadServerInfoForProxy(serverName, mode, selectedTools = []) {
             }
             // 注意：不再使用 server.instructions，因为它可能包含中文模板描述
 
-            if (mode === 'add') {
-                $('#proxyInstructions').val(originalInstructions);
-                $('#proxyInstructions').prop('readonly', true);
-                $('#editAddInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
-            } else {
-                // 在编辑模式下，检查当前用法说明是否已被用户自定义
-                const currentInstructions = $('#editProxyInstructions').val();
-                // 如果当前用法说明为空、是默认模板或者是"No Instructions"，则使用原始说明
-                if (!currentInstructions ||
-                    currentInstructions.startsWith('MCP 服务') ||
-                    currentInstructions === 'No Instructions') {
-                    $('#editProxyInstructions').val(originalInstructions);
+            // 检查是否应该隐藏 instructions 字段
+            if (originalInstructions === "No Instructions" || !originalInstructions.trim()) {
+                if (mode === 'add') {
+                    $('#proxyServiceInfo').hide();
+                    $('#proxyInstructions').val('');
+                } else {
+                    $('#editProxyServiceInfo').hide();
+                    $('#editProxyInstructions').val('');
                 }
-                $('#editProxyInstructions').prop('readonly', true);
-                $('#editInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
+            } else {
+                if (mode === 'add') {
+                    $('#proxyServiceInfo').show();
+                    $('#proxyInstructions').val(originalInstructions);
+                    $('#proxyInstructions').prop('readonly', true);
+                    $('#editAddInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
+                } else {
+                    $('#editProxyServiceInfo').show();
+                    // 在编辑模式下，检查当前用法说明是否已被用户自定义
+                    const currentInstructions = $('#editProxyInstructions').val();
+                    // 如果当前用法说明为空、是默认模板或者是"No Instructions"，则使用原始说明
+                    if (!currentInstructions ||
+                        currentInstructions.startsWith('MCP 服务') ||
+                        currentInstructions === 'No Instructions') {
+                        $('#editProxyInstructions').val(originalInstructions);
+                    }
+                    $('#editProxyInstructions').prop('readonly', true);
+                    $('#editInstructionsBtn').text(window.i18n.t('action.edit.instructions')).removeClass('btn-primary').addClass('btn-outline-primary');
+                }
             }
 
             // 显示工具列表
