@@ -559,10 +559,33 @@ class I18n {
     init() {
         // 检测浏览器语言
         this.detectLanguage();
-        // 应用翻译
+        // 预先应用翻译到关键元素，减少闪烁
+        this.preApplyTranslations();
+        // 应用完整翻译
         this.applyTranslations();
         // 添加语言切换按钮
         this.addLanguageSwitcher();
+    }
+
+    // 预先应用翻译到关键的侧边栏元素，减少闪烁
+    preApplyTranslations() {
+        // 优先处理侧边栏导航文本，这些是最容易产生闪烁的元素
+        const criticalElements = [
+            'nav.services',
+            'nav.proxies',
+            'sidebar.title',
+            'sidebar.toggle'
+        ];
+
+        criticalElements.forEach(key => {
+            const elements = document.querySelectorAll(`[data-i18n="${key}"]`);
+            elements.forEach(element => {
+                const newText = this.t(key);
+                if (element.textContent !== newText) {
+                    element.textContent = newText;
+                }
+            });
+        });
     }
     
     detectLanguage() {
@@ -614,22 +637,32 @@ class I18n {
         // 更新页面标题
         document.title = this.t('page.title');
 
-        // 更新所有带有data-i18n属性的元素
+        // 更新所有带有data-i18n属性的元素，避免不必要的DOM操作
         document.querySelectorAll('[data-i18n]').forEach(element => {
             const key = element.getAttribute('data-i18n');
-            element.textContent = this.t(key);
+            const newText = this.t(key);
+            // 只有当文本确实需要更新时才修改DOM，减少闪烁
+            if (element.textContent !== newText) {
+                element.textContent = newText;
+            }
         });
 
         // 更新所有带有data-i18n-placeholder属性的元素
         document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
             const key = element.getAttribute('data-i18n-placeholder');
-            element.placeholder = this.t(key);
+            const newPlaceholder = this.t(key);
+            if (element.placeholder !== newPlaceholder) {
+                element.placeholder = newPlaceholder;
+            }
         });
 
         // 更新所有带有data-i18n-title属性的元素
         document.querySelectorAll('[data-i18n-title]').forEach(element => {
             const key = element.getAttribute('data-i18n-title');
-            element.title = this.t(key);
+            const newTitle = this.t(key);
+            if (element.title !== newTitle) {
+                element.title = newTitle;
+            }
         });
 
         // 刷新表格内容以应用新的翻译

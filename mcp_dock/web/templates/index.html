@@ -780,6 +780,12 @@
             overflow: hidden;
             display: inline-block;
             max-width: 200px;
+            min-height: 1.2em; /* 防止页面加载时的布局跳动 */
+        }
+
+        /* 防止国际化加载时的文本闪烁 */
+        .nav-text[data-i18n] {
+            visibility: visible; /* 确保文本始终可见 */
         }
 
         .sidebar.collapsed .nav-text {
@@ -910,13 +916,13 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#" data-bs-toggle="tab" data-bs-target="#serversTab" id="serversNavLink">
                             <i class="fas fa-server"></i>
-                            <span class="nav-text" data-i18n="nav.services">MCP 服务管理</span>
+                            <span class="nav-text" data-i18n="nav.services">MCP 服务</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#" data-bs-toggle="tab" data-bs-target="#proxiesTab" id="proxiesNavLink">
                             <i class="fas fa-network-wired"></i>
-                            <span class="nav-text" data-i18n="nav.proxies">MCP 代理管理</span>
+                            <span class="nav-text" data-i18n="nav.proxies">MCP 代理</span>
                         </a>
                     </li>
                 </ul>
