@@ -619,3 +619,157 @@ class MCPErrorHandler:
             error_msg,
             error_details
         )
+
+class MCPResourceManager:
+    """Manages MCP resources according to 2025-03-26 specification"""
+
+    @staticmethod
+    def validate_resource_uri(uri: str) -> tuple[bool, Optional[str]]:
+        """Validate resource URI format
+
+        Args:
+            uri: Resource URI to validate
+
+        Returns:
+            tuple: (is_valid, error_message)
+        """
+        if not isinstance(uri, str) or not uri.strip():
+            return False, "Resource URI must be a non-empty string"
+
+        # Basic URI validation - should start with a scheme
+        if "://" not in uri:
+            return False, "Resource URI must include a valid scheme (e.g., file://, http://)"
+
+        return True, None
+
+    @staticmethod
+    async def list_resources() -> Dict[str, Any]:
+        """List available resources
+
+        Returns:
+            MCP-compliant resources list response
+        """
+        # Default implementation returns empty list
+        # This can be extended to support actual resource discovery
+        return {
+            "resources": []
+        }
+
+    @staticmethod
+    async def read_resource(uri: str) -> Dict[str, Any]:
+        """Read a specific resource
+
+        Args:
+            uri: Resource URI to read
+
+        Returns:
+            MCP-compliant resource read response
+        """
+        # Validate URI
+        is_valid, error_msg = MCPResourceManager.validate_resource_uri(uri)
+        if not is_valid:
+            raise ValueError(f"Invalid resource URI: {error_msg}")
+
+        # Default implementation - can be extended for actual resource reading
+        return {
+            "contents": [
+                {
+                    "uri": uri,
+                    "mimeType": "text/plain",
+                    "text": f"Resource content for {uri} (placeholder implementation)"
+                }
+            ]
+        }
+
+class MCPPromptManager:
+    """Manages MCP prompts according to 2025-03-26 specification"""
+
+    @staticmethod
+    def validate_prompt_name(name: str) -> tuple[bool, Optional[str]]:
+        """Validate prompt name format
+
+        Args:
+            name: Prompt name to validate
+
+        Returns:
+            tuple: (is_valid, error_message)
+        """
+        if not isinstance(name, str) or not name.strip():
+            return False, "Prompt name must be a non-empty string"
+
+        # Validate name format (similar to tool names)
+        import re
+        name_pattern = r'^[a-zA-Z0-9_-]+$'
+        if not re.match(name_pattern, name):
+            return False, "Prompt name must contain only letters, numbers, underscores, and hyphens"
+
+        return True, None
+
+    @staticmethod
+    def validate_prompt_arguments(arguments: Dict[str, Any]) -> tuple[bool, Optional[str]]:
+        """Validate prompt arguments
+
+        Args:
+            arguments: Prompt arguments to validate
+
+        Returns:
+            tuple: (is_valid, error_message)
+        """
+        if not isinstance(arguments, dict):
+            return False, "Prompt arguments must be an object"
+
+        # Validate each argument value
+        for key, value in arguments.items():
+            if not isinstance(key, str):
+                return False, f"Argument key must be a string, got: {type(key)}"
+
+        return True, None
+
+    @staticmethod
+    async def list_prompts() -> Dict[str, Any]:
+        """List available prompts
+
+        Returns:
+            MCP-compliant prompts list response
+        """
+        # Default implementation returns empty list
+        # This can be extended to support actual prompt discovery
+        return {
+            "prompts": []
+        }
+
+    @staticmethod
+    async def get_prompt(name: str, arguments: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Get a specific prompt
+
+        Args:
+            name: Prompt name
+            arguments: Optional prompt arguments
+
+        Returns:
+            MCP-compliant prompt response
+        """
+        # Validate prompt name
+        is_valid, error_msg = MCPPromptManager.validate_prompt_name(name)
+        if not is_valid:
+            raise ValueError(f"Invalid prompt name: {error_msg}")
+
+        # Validate arguments if provided
+        if arguments is not None:
+            is_valid, error_msg = MCPPromptManager.validate_prompt_arguments(arguments)
+            if not is_valid:
+                raise ValueError(f"Invalid prompt arguments: {error_msg}")
+
+        # Default implementation - can be extended for actual prompt generation
+        return {
+            "description": f"Prompt {name} (placeholder implementation)",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": {
+                        "type": "text",
+                        "text": f"This is a placeholder prompt for {name}"
+                    }
+                }
+            ]
+        }

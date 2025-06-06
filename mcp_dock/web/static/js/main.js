@@ -387,22 +387,29 @@ $(document).ready(function() {
                     window.i18n.applyTranslations();
                 }
             };
+
+            // 国际化完成后再初始化侧边栏，避免闪烁
+            SidebarManager.init();
+
+            // 初始化BASE URL配置
+            BaseUrlManager.loadFromStorage();
+            BaseUrlManager.updateUI();
+
             return true;
         }
         return false;
     }
 
-    // 尝试初始化，如果失败则等待一下再试
+    // 尝试初始化，如果失败则等待一下再试，但减少延迟时间
     if (!initializeI18n()) {
-        setTimeout(initializeI18n, 100);
+        // 减少延迟时间从100ms到50ms，减少闪烁时间
+        setTimeout(function() {
+            if (!initializeI18n()) {
+                // 如果还是失败，再等待50ms
+                setTimeout(initializeI18n, 50);
+            }
+        }, 50);
     }
-
-    // 初始化侧边栏
-    SidebarManager.init();
-
-    // 初始化BASE URL配置
-    BaseUrlManager.loadFromStorage();
-    BaseUrlManager.updateUI();
 
     // 恢复 tab 状态
     if (!TabStateManager.restoreTabState()) {

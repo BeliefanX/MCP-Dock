@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from mcp_dock.core.mcp_proxy import McpProxyManager
 from mcp_dock.core.sse_session_manager import SSESessionManager
-from mcp_dock.core.mcp_compliance import MCPComplianceEnforcer
+from mcp_dock.core.mcp_compliance import MCPComplianceEnforcer, MCPErrorHandler
 from mcp_dock.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -506,12 +506,9 @@ async def handle_proxy_streamable_http(proxy_name: str, request: Request, manage
         elif method == "tools/call":
             response = await handle_tool_call_request(proxy_name, body, proxy_manager, mcp_manager)
         elif method == "resources/list":
-            # Provide default empty response for MCP Inspector compatibility
-            response = {
-                "jsonrpc": "2.0",
-                "id": body.get("id"),
-                "result": {"resources": []}
-            }
+            response = await handle_resources_list_request(proxy_name, body, proxy_manager, mcp_manager)
+        elif method == "resources/read":
+            response = await handle_resources_read_request(proxy_name, body, proxy_manager, mcp_manager)
         elif method == "resources/templates/list":
             # Provide default empty response for MCP Inspector compatibility
             response = {
@@ -519,6 +516,10 @@ async def handle_proxy_streamable_http(proxy_name: str, request: Request, manage
                 "id": body.get("id"),
                 "result": {"resourceTemplates": []}
             }
+        elif method == "prompts/list":
+            response = await handle_prompts_list_request(proxy_name, body, proxy_manager, mcp_manager)
+        elif method == "prompts/get":
+            response = await handle_prompts_get_request(proxy_name, body, proxy_manager, mcp_manager)
         else:
             response = {
                 "jsonrpc": "2.0",
@@ -737,6 +738,168 @@ async def handle_tool_call_request(proxy_name: str, message: dict, proxy_manager
         }
         return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
 
+async def handle_resources_list_request(proxy_name: str, message: dict, proxy_manager, mcp_manager) -> dict:
+    """Handle MCP resources/list request"""
+    try:
+        # Try to get resources from the target service
+        proxy = proxy_manager.get_proxy_status(proxy_name)
+        if not proxy:
+            raise HTTPException(status_code=404, detail=f"Proxy {proxy_name} not found")
+
+        target_service_name = proxy.config.server_name
+
+        try:
+            # Try to call the target service
+            result = await mcp_manager.call_server_method(target_service_name, "resources/list", {})
+            response = {
+                "jsonrpc": "2.0",
+                "id": message.get("id"),
+                "result": result
+            }
+        except Exception:
+            # Fallback to default implementation
+            from mcp_dock.core.mcp_compliance import MCPResourceManager
+            result = await MCPResourceManager.list_resources()
+            response = {
+                "jsonrpc": "2.0",
+                "id": message.get("id"),
+                "result": result
+            }
+
+        logger.info(f"Resources list request for proxy {proxy_name}: id={message.get('id')}, result=success")
+        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+
+    except Exception as e:
+        logger.error(f"Error handling resources/list request for proxy {proxy_name}: {e}")
+        return MCPErrorHandler.handle_conversion_error(
+            e, "Resources list request", message.get("id")
+        )
+
+async def handle_resources_read_request(proxy_name: str, message: dict, proxy_manager, mcp_manager) -> dict:
+    """Handle MCP resources/read request"""
+    try:
+        params = message.get("params", {})
+        uri = params.get("uri")
+
+        if not uri:
+            return MCPErrorHandler.handle_validation_error(
+                "Missing required parameter: uri", message.get("id"), "uri", None
+            )
+
+        proxy = proxy_manager.get_proxy_status(proxy_name)
+        if not proxy:
+            raise HTTPException(status_code=404, detail=f"Proxy {proxy_name} not found")
+
+        target_service_name = proxy.config.server_name
+
+        try:
+            # Try to call the target service
+            result = await mcp_manager.call_server_method(target_service_name, "resources/read", params)
+            response = {
+                "jsonrpc": "2.0",
+                "id": message.get("id"),
+                "result": result
+            }
+        except Exception:
+            # Fallback to default implementation
+            from mcp_dock.core.mcp_compliance import MCPResourceManager
+            result = await MCPResourceManager.read_resource(uri)
+            response = {
+                "jsonrpc": "2.0",
+                "id": message.get("id"),
+                "result": result
+            }
+
+        logger.info(f"Resource read request for proxy {proxy_name}: id={message.get('id')}, uri={uri}, result=success")
+        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+
+    except Exception as e:
+        logger.error(f"Error handling resources/read request for proxy {proxy_name}: {e}")
+        return MCPErrorHandler.handle_conversion_error(
+            e, "Resource read request", message.get("id")
+        )
+
+async def handle_prompts_list_request(proxy_name: str, message: dict, proxy_manager, mcp_manager) -> dict:
+    """Handle MCP prompts/list request"""
+    try:
+        proxy = proxy_manager.get_proxy_status(proxy_name)
+        if not proxy:
+            raise HTTPException(status_code=404, detail=f"Proxy {proxy_name} not found")
+
+        target_service_name = proxy.config.server_name
+
+        try:
+            # Try to call the target service
+            result = await mcp_manager.call_server_method(target_service_name, "prompts/list", {})
+            response = {
+                "jsonrpc": "2.0",
+                "id": message.get("id"),
+                "result": result
+            }
+        except Exception:
+            # Fallback to default implementation
+            from mcp_dock.core.mcp_compliance import MCPPromptManager
+            result = await MCPPromptManager.list_prompts()
+            response = {
+                "jsonrpc": "2.0",
+                "id": message.get("id"),
+                "result": result
+            }
+
+        logger.info(f"Prompts list request for proxy {proxy_name}: id={message.get('id')}, result=success")
+        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+
+    except Exception as e:
+        logger.error(f"Error handling prompts/list request for proxy {proxy_name}: {e}")
+        return MCPErrorHandler.handle_conversion_error(
+            e, "Prompts list request", message.get("id")
+        )
+
+async def handle_prompts_get_request(proxy_name: str, message: dict, proxy_manager, mcp_manager) -> dict:
+    """Handle MCP prompts/get request"""
+    try:
+        params = message.get("params", {})
+        name = params.get("name")
+        arguments = params.get("arguments")
+
+        if not name:
+            return MCPErrorHandler.handle_validation_error(
+                "Missing required parameter: name", message.get("id"), "name", None
+            )
+
+        proxy = proxy_manager.get_proxy_status(proxy_name)
+        if not proxy:
+            raise HTTPException(status_code=404, detail=f"Proxy {proxy_name} not found")
+
+        target_service_name = proxy.config.server_name
+
+        try:
+            # Try to call the target service
+            result = await mcp_manager.call_server_method(target_service_name, "prompts/get", params)
+            response = {
+                "jsonrpc": "2.0",
+                "id": message.get("id"),
+                "result": result
+            }
+        except Exception:
+            # Fallback to default implementation
+            from mcp_dock.core.mcp_compliance import MCPPromptManager
+            result = await MCPPromptManager.get_prompt(name, arguments)
+            response = {
+                "jsonrpc": "2.0",
+                "id": message.get("id"),
+                "result": result
+            }
+
+        logger.info(f"Prompt get request for proxy {proxy_name}: id={message.get('id')}, name={name}, result=success")
+        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+
+    except Exception as e:
+        logger.error(f"Error handling prompts/get request for proxy {proxy_name}: {e}")
+        return MCPErrorHandler.handle_conversion_error(
+            e, "Prompt get request", message.get("id")
+        )
+
 
 async def handle_sse_message(proxy_name: str, request: Request) -> JSONResponse:
     """Handle SSE message from MCP Inspector
@@ -817,12 +980,13 @@ async def handle_sse_message(proxy_name: str, request: Request) -> JSONResponse:
             elif method == "tools/call":
                 response = await handle_tool_call_request(proxy_name, message_data, proxy_manager, mcp_manager)
             elif method == "resources/list":
-                # Provide default empty response for MCP Inspector compatibility
-                response = {
-                    "jsonrpc": "2.0",
-                    "id": message_data.get("id"),
-                    "result": {"resources": []}
-                }
+                response = await handle_resources_list_request(proxy_name, message_data, proxy_manager, mcp_manager)
+            elif method == "resources/read":
+                response = await handle_resources_read_request(proxy_name, message_data, proxy_manager, mcp_manager)
+            elif method == "prompts/list":
+                response = await handle_prompts_list_request(proxy_name, message_data, proxy_manager, mcp_manager)
+            elif method == "prompts/get":
+                response = await handle_prompts_get_request(proxy_name, message_data, proxy_manager, mcp_manager)
             elif method == "resources/templates/list":
                 # Provide default empty response for MCP Inspector compatibility
                 response = {

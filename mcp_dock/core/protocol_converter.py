@@ -54,6 +54,54 @@ def clean_tool_arguments(arguments: Dict[str, Any]) -> Dict[str, Any]:
 
     return cleaned
 
+async def handle_resources_and_prompts_method(session: Any, method: str, params: Dict[str, Any], message_id: Any) -> Dict[str, Any]:
+    """Handle resources and prompts methods with fallback to default implementations
+
+    Args:
+        session: MCP client session
+        method: Method name (resources/list, resources/read, prompts/list, prompts/get)
+        params: Method parameters
+        message_id: Request ID
+
+    Returns:
+        MCP-compliant response
+    """
+    try:
+        # Try to call the method on the session
+        result = await session.send_request(method, params)
+        response = {
+            "jsonrpc": "2.0",
+            "id": message_id,
+            "result": result
+        }
+        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message_id)
+    except Exception:
+        # Fallback to default implementation
+        if method == "resources/list":
+            from mcp_dock.core.mcp_compliance import MCPResourceManager
+            result = await MCPResourceManager.list_resources()
+        elif method == "resources/read":
+            from mcp_dock.core.mcp_compliance import MCPResourceManager
+            uri = params.get("uri", "")
+            result = await MCPResourceManager.read_resource(uri)
+        elif method == "prompts/list":
+            from mcp_dock.core.mcp_compliance import MCPPromptManager
+            result = await MCPPromptManager.list_prompts()
+        elif method == "prompts/get":
+            from mcp_dock.core.mcp_compliance import MCPPromptManager
+            name = params.get("name", "")
+            arguments = params.get("arguments")
+            result = await MCPPromptManager.get_prompt(name, arguments)
+        else:
+            raise ValueError(f"Unsupported method: {method}")
+
+        response = {
+            "jsonrpc": "2.0",
+            "id": message_id,
+            "result": result
+        }
+        return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message_id)
+
 class ProtocolConverter(ABC):
     """Abstract base class for protocol converters"""
     
@@ -110,6 +158,106 @@ class StdioToStreamableHTTPConverter(ProtocolConverter):
                             "result": {"tools": tools}
                         }
                         return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                    elif method == "resources/list":
+                        try:
+                            result = await session.list_resources()
+                            # Convert to dict format for HTTP
+                            if hasattr(result, 'resources'):
+                                resources = [resource.__dict__ if hasattr(resource, '__dict__') else resource
+                                           for resource in result.resources]
+                            else:
+                                resources = []
+
+                            response = {
+                                "jsonrpc": "2.0",
+                                "id": message.get("id"),
+                                "result": {"resources": resources}
+                            }
+                            return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                        except Exception:
+                            # Fallback to default implementation if server doesn't support resources
+                            from mcp_dock.core.mcp_compliance import MCPResourceManager
+                            result = await MCPResourceManager.list_resources()
+                            response = {
+                                "jsonrpc": "2.0",
+                                "id": message.get("id"),
+                                "result": result
+                            }
+                            return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                    elif method == "resources/read":
+                        try:
+                            uri = params.get("uri")
+                            if not uri:
+                                raise ValueError("Missing required parameter: uri")
+                            result = await session.read_resource(uri)
+                            response = {
+                                "jsonrpc": "2.0",
+                                "id": message.get("id"),
+                                "result": result.__dict__ if hasattr(result, '__dict__') else result
+                            }
+                            return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                        except Exception:
+                            # Fallback to default implementation if server doesn't support resources
+                            from mcp_dock.core.mcp_compliance import MCPResourceManager
+                            uri = params.get("uri", "")
+                            result = await MCPResourceManager.read_resource(uri)
+                            response = {
+                                "jsonrpc": "2.0",
+                                "id": message.get("id"),
+                                "result": result
+                            }
+                            return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                    elif method == "prompts/list":
+                        try:
+                            result = await session.list_prompts()
+                            # Convert to dict format for HTTP
+                            if hasattr(result, 'prompts'):
+                                prompts = [prompt.__dict__ if hasattr(prompt, '__dict__') else prompt
+                                         for prompt in result.prompts]
+                            else:
+                                prompts = []
+
+                            response = {
+                                "jsonrpc": "2.0",
+                                "id": message.get("id"),
+                                "result": {"prompts": prompts}
+                            }
+                            return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                        except Exception:
+                            # Fallback to default implementation if server doesn't support prompts
+                            from mcp_dock.core.mcp_compliance import MCPPromptManager
+                            result = await MCPPromptManager.list_prompts()
+                            response = {
+                                "jsonrpc": "2.0",
+                                "id": message.get("id"),
+                                "result": result
+                            }
+                            return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                    elif method == "prompts/get":
+                        try:
+                            name = params.get("name")
+                            arguments = params.get("arguments")
+                            if not name:
+                                raise ValueError("Missing required parameter: name")
+                            result = await session.get_prompt(name, arguments)
+                            response = {
+                                "jsonrpc": "2.0",
+                                "id": message.get("id"),
+                                "result": result.__dict__ if hasattr(result, '__dict__') else result
+                            }
+                            return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                        except Exception:
+                            # Fallback to default implementation if server doesn't support prompts
+                            from mcp_dock.core.mcp_compliance import MCPPromptManager
+                            name = params.get("name", "")
+                            arguments = params.get("arguments")
+                            result = await MCPPromptManager.get_prompt(name, arguments)
+                            response = {
+                                "jsonrpc": "2.0",
+                                "id": message.get("id"),
+                                "result": result
+                            }
+                            return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
                     else:
                         # Generic method call
                         result = await session.send_request(method, params)
@@ -183,6 +331,9 @@ class StdioToSSEConverter(ProtocolConverter):
                             "result": {"tools": tools}
                         }
                         return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                    elif method in ["resources/list", "resources/read", "prompts/list", "prompts/get"]:
+                        # Handle resources and prompts methods
+                        return await handle_resources_and_prompts_method(session, method, params, message.get("id"))
                     else:
                         # Generic method call
                         result = await session.send_request(method, params)
@@ -256,6 +407,9 @@ class SSEToStreamableHTTPConverter(ProtocolConverter):
                             "result": {"tools": tools}
                         }
                         return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                    elif method in ["resources/list", "resources/read", "prompts/list", "prompts/get"]:
+                        # Handle resources and prompts methods
+                        return await handle_resources_and_prompts_method(session, method, params, message.get("id"))
                     else:
                         # Generic method call
                         result = await session.send_request(method, params)
@@ -322,6 +476,9 @@ class StreamableHTTPToSSEConverter(ProtocolConverter):
                             "result": {"tools": tools}
                         }
                         return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                    elif method in ["resources/list", "resources/read", "prompts/list", "prompts/get"]:
+                        # Handle resources and prompts methods
+                        return await handle_resources_and_prompts_method(session, method, params, message.get("id"))
                     else:
                         # Generic method call
                         result = await session.send_request(method, params)
@@ -395,6 +552,9 @@ class SSEToStdioConverter(ProtocolConverter):
                             "result": {"tools": tools}
                         }
                         return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                    elif method in ["resources/list", "resources/read", "prompts/list", "prompts/get"]:
+                        # Handle resources and prompts methods
+                        return await handle_resources_and_prompts_method(session, method, params, message.get("id"))
                     else:
                         # Generic method call
                         result = await session.send_request(method, params)
@@ -461,6 +621,9 @@ class StreamableHTTPToStdioConverter(ProtocolConverter):
                             "result": {"tools": tools}
                         }
                         return MCPComplianceEnforcer.ensure_jsonrpc_response(response, message.get("id"))
+                    elif method in ["resources/list", "resources/read", "prompts/list", "prompts/get"]:
+                        # Handle resources and prompts methods
+                        return await handle_resources_and_prompts_method(session, method, params, message.get("id"))
                     else:
                         # Generic method call
                         result = await session.send_request(method, params)
