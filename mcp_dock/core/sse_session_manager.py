@@ -17,6 +17,14 @@ from mcp_dock.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+# Import heartbeat manager
+try:
+    from mcp_dock.core.heartbeat_manager import HeartbeatManager
+    HEARTBEAT_MANAGER_AVAILABLE = True
+except ImportError:
+    HEARTBEAT_MANAGER_AVAILABLE = False
+    logger.warning("HeartbeatManager not available, using basic heartbeat functionality")
+
 
 @dataclass
 class PendingMessage:
@@ -73,6 +81,16 @@ class SSESessionManager:
         # Performance optimization: cache for rate limit calculations
         self._rate_limit_cache: Dict[str, tuple[float, bool, str]] = {}  # client_host -> (timestamp, allowed, reason)
         self._cache_ttl = 5.0  # Cache TTL in seconds
+
+        # Initialize heartbeat manager if available
+        self.heartbeat_manager = None
+        if HEARTBEAT_MANAGER_AVAILABLE:
+            try:
+                self.heartbeat_manager = HeartbeatManager()
+                logger.info("Heartbeat Manager initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize HeartbeatManager: {e}")
+                self.heartbeat_manager = None
 
         # Rate limit violation tracking for monitoring and diagnostics
         self._rate_limit_violations: Dict[str, List[Dict[str, Any]]] = {}  # client_host -> [violation_records]
@@ -499,6 +517,87 @@ class SSESessionManager:
             if session:
                 session.last_activity = time.time()
             return session
+
+    def get_session_info(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Get session information for monitoring and logging
+
+        Args:
+            session_id: Session ID to get info for
+
+        Returns:
+            Dictionary with session information or None if session not found
+        """
+        with self.session_lock:
+            session = self.sessions.get(session_id)
+            if not session:
+                return None
+
+            # Get heartbeat metrics if available
+            heartbeat_metrics = None
+            if self.heartbeat_manager:
+                try:
+                    heartbeat_metrics = self.heartbeat_manager.get_session_metrics(session_id)
+                except Exception as e:
+                    logger.debug(f"Error getting heartbeat metrics for {session_id}: {e}")
+
+            result = {
+                "session_id": session_id,
+                "proxy_name": session.proxy_name,
+                "client_host": session.client_host,
+                "created_at": session.created_at,
+                "last_activity": session.last_activity,
+                "is_initialized": session.is_initialized,
+                "pending_messages": list(session.pending_messages),
+                "message_count": len(session.pending_messages)
+            }
+
+            # Add heartbeat metrics if available
+            if heartbeat_metrics:
+                result.update({
+                    "heartbeat_metrics": {
+                        "total_heartbeats": heartbeat_metrics.total_heartbeats,
+                        "successful_heartbeats": heartbeat_metrics.successful_heartbeats,
+                        "failed_heartbeats": heartbeat_metrics.failed_heartbeats,
+                        "error_rate_percent": heartbeat_metrics.error_rate_percent,
+                        "average_response_time_ms": heartbeat_metrics.average_response_time_ms,
+                        "last_heartbeat_time": heartbeat_metrics.last_heartbeat_time
+                    }
+                })
+
+            return result
+
+    def record_heartbeat(self, session_id: str, success: bool, response_time_ms: float = 0.0):
+        """Record a heartbeat for enhanced monitoring
+
+        Args:
+            session_id: Session ID
+            success: Whether the heartbeat was successful
+            response_time_ms: Response time in milliseconds
+        """
+        if self.heartbeat_manager:
+            try:
+                self.heartbeat_manager.record_heartbeat(session_id, success, response_time_ms)
+            except Exception as e:
+                logger.debug(f"Error recording heartbeat for {session_id}: {e}")
+
+    def get_adaptive_heartbeat_interval(self, session_id: str, system_load: float = 0.0) -> int:
+        """Get adaptive heartbeat interval for a session
+
+        Args:
+            session_id: Session ID
+            system_load: Current system load (0.0-1.0)
+
+        Returns:
+            Heartbeat interval in seconds
+        """
+        if self.heartbeat_manager:
+            try:
+                return self.heartbeat_manager.get_adaptive_interval(session_id, system_load)
+            except Exception as e:
+                logger.debug(f"Error getting adaptive interval for {session_id}: {e}")
+
+        # Fallback to default interval
+        return 10
 
     def add_message(self, session_id: str, message: Dict[str, Any], priority: bool = False) -> bool:
         """Add a message to session's pending messages queue

@@ -22,16 +22,41 @@ class MCPLogFormatter(logging.Formatter):
         # Add MCP-specific fields if available
         mcp_fields = []
         if self.include_mcp_fields:
+            # Core MCP fields
             if hasattr(record, 'protocol_version'):
                 mcp_fields.append(f"protocol={record.protocol_version}")
             if hasattr(record, 'request_id'):
                 mcp_fields.append(f"req_id={record.request_id}")
             if hasattr(record, 'method'):
                 mcp_fields.append(f"method={record.method}")
+
+            # Client identification fields
+            if hasattr(record, 'client_ip'):
+                mcp_fields.append(f"client_ip={record.client_ip}")
+            if hasattr(record, 'user_agent'):
+                mcp_fields.append(f"user_agent={record.user_agent}")
+            if hasattr(record, 'proxy_name'):
+                mcp_fields.append(f"proxy={record.proxy_name}")
+
+            # Session and connection fields
+            if hasattr(record, 'session_age_seconds'):
+                mcp_fields.append(f"session_age={record.session_age_seconds}s")
+            if hasattr(record, 'connection_timestamp'):
+                mcp_fields.append(f"connected_at={record.connection_timestamp}")
+            if hasattr(record, 'transport_type'):
+                mcp_fields.append(f"transport={record.transport_type}")
+
+            # Performance and error fields
             if hasattr(record, 'duration_ms'):
                 mcp_fields.append(f"duration={record.duration_ms}ms")
             if hasattr(record, 'error_code'):
                 mcp_fields.append(f"error_code={record.error_code}")
+
+            # Additional monitoring fields
+            if hasattr(record, 'pending_messages'):
+                mcp_fields.append(f"pending_msgs={record.pending_messages}")
+            if hasattr(record, 'heartbeat_interval_seconds'):
+                mcp_fields.append(f"hb_interval={record.heartbeat_interval_seconds}s")
 
         # Construct format string
         if mcp_fields:

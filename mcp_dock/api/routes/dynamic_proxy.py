@@ -2,6 +2,7 @@
 Dynamic MCP Proxy Routes - Dynamically generate endpoints based on proxy configuration
 """
 
+import asyncio
 import json
 import logging
 import time
@@ -13,7 +14,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from mcp_dock.core.mcp_proxy import McpProxyManager
 from mcp_dock.core.sse_session_manager import SSESessionManager
 from mcp_dock.core.mcp_compliance import MCPComplianceEnforcer, MCPErrorHandler
-from mcp_dock.utils.logging_config import get_logger
+from mcp_dock.utils.logging_config import get_logger, log_mcp_request
 
 logger = get_logger(__name__)
 
@@ -101,6 +102,47 @@ async def get_session_stats():
     session_manager = SSESessionManager.get_instance()
     stats = session_manager.get_session_stats()
     return JSONResponse(content=stats)
+
+
+@router.get("/debug/heartbeat")
+async def get_heartbeat_stats():
+    """Get comprehensive heartbeat statistics and metrics"""
+    from mcp_dock.core.sse_session_manager import SSESessionManager
+    session_manager = SSESessionManager.get_instance()
+
+    result = {
+        "heartbeat_enabled": session_manager.heartbeat_manager is not None,
+        "timestamp": time.time()
+    }
+
+    if session_manager.heartbeat_manager:
+        try:
+            # Get overall heartbeat metrics
+            overall_metrics = session_manager.heartbeat_manager.get_overall_metrics()
+            result["overall_metrics"] = overall_metrics
+
+            # Get session-specific heartbeat info
+            session_heartbeats = {}
+            for session_id in session_manager.sessions.keys():
+                session_info = session_manager.get_session_info(session_id)
+                if session_info and "heartbeat_metrics" in session_info:
+                    session_heartbeats[session_id[:8] + "..."] = session_info["heartbeat_metrics"]
+
+            result["session_heartbeats"] = session_heartbeats
+            result["config"] = {
+                "heartbeat_interval": session_manager.heartbeat_manager.config.heartbeat_interval_seconds,
+                "adaptive_enabled": session_manager.heartbeat_manager.config.adaptive_heartbeat_enabled,
+                "performance_monitoring": session_manager.heartbeat_manager.config.performance_monitoring_enabled,
+                "enhanced_logging": session_manager.heartbeat_manager.config.enhanced_heartbeat_logging
+            }
+
+        except Exception as e:
+            result["error"] = f"Error getting heartbeat metrics: {e}"
+            logger.error(f"Error in heartbeat stats endpoint: {e}")
+    else:
+        result["message"] = "Heartbeat manager not available"
+
+    return JSONResponse(content=result)
 
 
 @router.options("/messages")
@@ -377,6 +419,10 @@ async def handle_proxy_warmup(
         async def mcp_sse_stream():
             import asyncio
             try:
+                # Get client information for logging and session management
+                client_ip = request.client.host if request.client else "unknown"
+                user_agent = request.headers.get("user-agent", "unknown")
+
                 # Register session with enhanced logging and rate limiting
                 if not session_manager.register_session(session_id, actual_proxy_name, client_ip):
                     # Rate limited - return error response
@@ -432,17 +478,62 @@ async def handle_proxy_warmup(
                     await asyncio.sleep(1)  # Check every 1 second instead of 5
                     heartbeat_count += 1
 
-                    if heartbeat_count % 10 == 0:  # Every 10 seconds
+                    # Get adaptive heartbeat interval
+                    heartbeat_interval = session_manager.get_adaptive_heartbeat_interval(session_id)
+                    heartbeat_check_interval = heartbeat_interval  # Use interval directly (in seconds)
+
+                    if heartbeat_count % heartbeat_check_interval == 0:  # Adaptive interval
+                        start_time = time.time()
                         heartbeat_msg = {
                             "jsonrpc": "2.0",
                             "method": "notifications/ping",
-                            "params": {"timestamp": time.time(), "sessionId": session_id}
+                            "params": {"timestamp": start_time, "sessionId": session_id}
                         }
                         yield f"event: ping\n"
                         yield f"data: {json.dumps(heartbeat_msg)}\n\n"
 
+                        # Record heartbeat metrics
+                        response_time_ms = (time.time() - start_time) * 1000
+                        session_manager.record_heartbeat(session_id, True, response_time_ms)
+
                         if heartbeat_count % 12 == 0:  # Log every minute
-                            logger.info(f"SSE session {session_id} heartbeat #{heartbeat_count//2}")
+                            # Enhanced heartbeat logging with comprehensive client identification
+                            session_info = session_manager.get_session_info(session_id)
+
+                            # Calculate session metrics
+                            current_time = time.time()
+                            session_created_at = session_info.get("created_at", current_time) if session_info else current_time
+                            session_age = current_time - session_created_at
+                            pending_count = len(session_info.get("pending_messages", [])) if session_info else 0
+
+                            # Format connection timestamp for readability
+                            import datetime
+                            connection_timestamp = datetime.datetime.fromtimestamp(session_created_at).strftime("%H:%M:%S")
+
+                            # Truncate user agent for readability while preserving key information
+                            truncated_user_agent = user_agent
+                            if len(user_agent) > 50:
+                                # Keep the most important parts: browser name and version
+                                truncated_user_agent = user_agent[:47] + "..."
+
+                            # Enhanced logging with comprehensive client identification
+                            from mcp_dock.utils.logging_config import log_mcp_request
+                            log_mcp_request(
+                                logger,
+                                logging.INFO,
+                                f"SSE heartbeat #{heartbeat_count//2}",
+                                request_id=session_id,
+                                method="notifications/ping",
+                                protocol_version="2025-03-26",
+                                client_ip=client_ip,
+                                user_agent=truncated_user_agent,
+                                proxy_name=actual_proxy_name,
+                                session_age_seconds=round(session_age, 1),
+                                connection_timestamp=connection_timestamp,
+                                transport_type="sse",
+                                pending_messages=pending_count,
+                                heartbeat_interval_seconds=heartbeat_interval
+                            )
 
                     # Clean up expired sessions periodically
                     if heartbeat_count % 60 == 0:  # Every 5 minutes
